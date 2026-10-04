@@ -1,0 +1,38 @@
+{
+  "name": "never",
+  "args": {
+    "policy": "never",
+    "window": "8w",
+    "no_gate": false,
+    "no_guard": false,
+    "corrupt": "none",
+    "threads": 2,
+    "name": "never"
+  },
+  "retrains": 0,
+  "promotions": 0,
+  "blocks": 0,
+  "periods": {
+    "2019 control": {
+      "brier": 0.16025,
+      "mean_daily_auc": 0.6385
+    },
+    "2020 Jan-Feb": {
+      "brier": 0.14118,
+      "mean_daily_auc": 0.5778
+    },
+    "2020 Mar-Apr shock": {
+      "brier": 0.24457,
+      "mean_daily_auc": 0.5332
+    },
+    "2020 May-Jun empty skies": {
+      "brier": 0.10667,
+      "mean_daily_auc": 0.5663
+    },
+    "all": {
+      "brier": 0.16395,
+      "mean_daily_auc": 0.6121
+    }
+  },
+  "events": []
+}

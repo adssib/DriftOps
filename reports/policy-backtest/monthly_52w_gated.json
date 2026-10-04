@@ -1,0 +1,273 @@
+{
+  "name": "monthly_52w_gated",
+  "args": {
+    "policy": "monthly",
+    "window": "52w",
+    "no_gate": false,
+    "no_guard": false,
+    "corrupt": "none",
+    "threads": 2,
+    "name": "monthly_52w_gated"
+  },
+  "retrains": 18,
+  "promotions": 3,
+  "blocks": 0,
+  "periods": {
+    "2019 control": {
+      "brier": 0.16025,
+      "mean_daily_auc": 0.6385
+    },
+    "2020 Jan-Feb": {
+      "brier": 0.14118,
+      "mean_daily_auc": 0.5778
+    },
+    "2020 Mar-Apr shock": {
+      "brier": 0.23936,
+      "mean_daily_auc": 0.5246
+    },
+    "2020 May-Jun empty skies": {
+      "brier": 0.09333,
+      "mean_daily_auc": 0.5972
+    },
+    "all": {
+      "brier": 0.16291,
+      "mean_daily_auc": 0.6146
+    }
+  },
+  "events": [
+    {
+      "day": "2019-01-01",
+      "action": "retrain",
+      "reason": "schedule",
+      "alarms": [],
+      "challenger": "v2",
+      "train_rows": 7071745,
+      "train_seconds": 128.9,
+      "gate": "brier 0.2045 > champion 0.1562",
+      "gate_champion_brier": 0.1562,
+      "gate_challenger_brier": 0.2045,
+      "promoted": false
+    },
+    {
+      "day": "2019-02-01",
+      "action": "retrain",
+      "reason": "schedule",
+      "alarms": [],
+      "challenger": "v3",
+      "train_rows": 7197389,
+      "train_seconds": 108.1,
+      "gate": "brier 0.1895 > champion 0.1789",
+      "gate_champion_brier": 0.1789,
+      "gate_challenger_brier": 0.1895,
+      "promoted": false
+    },
+    {
+      "day": "2019-03-01",
+      "action": "retrain",
+      "reason": "schedule",
+      "alarms": [],
+      "challenger": "v4",
+      "train_rows": 7210205,
+      "train_seconds": 104.7,
+      "gate": "brier 0.1963 > champion 0.1881",
+      "gate_champion_brier": 0.1881,
+      "gate_challenger_brier": 0.1963,
+      "promoted": false
+    },
+    {
+      "day": "2019-04-01",
+      "action": "retrain",
+      "reason": "schedule",
+      "alarms": [],
+      "challenger": "v5",
+      "train_rows": 7227958,
+      "train_seconds": 105.0,
+      "gate": "brier 0.1233 > champion 0.1224",
+      "gate_champion_brier": 0.1224,
+      "gate_challenger_brier": 0.1233,
+      "promoted": false
+    },
+    {
+      "day": "2019-05-01",
+      "action": "retrain",
+      "reason": "schedule",
+      "alarms": [],
+      "challenger": "v6",
+      "train_rows": 7244997,
+      "train_seconds": 93.2,
+      "gate": "brier 0.1481 > champion 0.1438",
+      "gate_champion_brier": 0.1438,
+      "gate_challenger_brier": 0.1481,
+      "promoted": false
+    },
+    {
+      "day": "2019-06-01",
+      "action": "retrain",
+      "reason": "schedule",
+      "alarms": [],
+      "challenger": "v7",
+      "train_rows": 7263114,
+      "train_seconds": 80.5,
+      "gate": "brier 0.1630 > champion 0.1515",
+      "gate_champion_brier": 0.1515,
+      "gate_challenger_brier": 0.163,
+      "promoted": false
+    },
+    {
+      "day": "2019-07-01",
+      "action": "retrain",
+      "reason": "schedule",
+      "alarms": [],
+      "challenger": "v8",
+      "train_rows": 7276085,
+      "train_seconds": 80.9,
+      "gate": "brier 0.1888 > champion 0.1868",
+      "gate_champion_brier": 0.1868,
+      "gate_challenger_brier": 0.1888,
+      "promoted": false
+    },
+    {
+      "day": "2019-08-01",
+      "action": "retrain",
+      "reason": "schedule",
+      "alarms": [],
+      "challenger": "v9",
+      "train_rows": 7287579,
+      "train_seconds": 78.0,
+      "gate": "auc 0.6577 < champion 0.6964 - 0.005",
+      "gate_champion_brier": 0.1511,
+      "gate_challenger_brier": 0.1509,
+      "promoted": false
+    },
+    {
+      "day": "2019-09-01",
+      "action": "retrain",
+      "reason": "schedule",
+      "alarms": [],
+      "challenger": "v10",
+      "train_rows": 7311686,
+      "train_seconds": 87.0,
+      "gate": "brier 0.1400 > champion 0.1284",
+      "gate_champion_brier": 0.1284,
+      "gate_challenger_brier": 0.14,
+      "promoted": false
+    },
+    {
+      "day": "2019-10-01",
+      "action": "retrain",
+      "reason": "schedule",
+      "alarms": [],
+      "challenger": "v11",
+      "train_rows": 7329527,
+      "train_seconds": 91.1,
+      "gate": "brier 0.1307 > champion 0.1289",
+      "gate_champion_brier": 0.1289,
+      "gate_challenger_brier": 0.1307,
+      "promoted": false
+    },
+    {
+      "day": "2019-11-01",
+      "action": "retrain",
+      "reason": "schedule",
+      "alarms": [],
+      "challenger": "v12",
+      "train_rows": 7348166,
+      "train_seconds": 140.0,
+      "gate": "brier 0.1862 > champion 0.1755",
+      "gate_champion_brier": 0.1755,
+      "gate_challenger_brier": 0.1862,
+      "promoted": false
+    },
+    {
+      "day": "2019-12-01",
+      "action": "retrain",
+      "reason": "schedule",
+      "alarms": [],
+      "challenger": "v13",
+      "train_rows": 7380515,
+      "train_seconds": 108.0,
+      "gate": "brier 0.1577 > champion 0.1449",
+      "gate_champion_brier": 0.1449,
+      "gate_challenger_brier": 0.1577,
+      "promoted": false
+    },
+    {
+      "day": "2020-01-01",
+      "action": "retrain",
+      "reason": "schedule",
+      "alarms": [],
+      "challenger": "v14",
+      "train_rows": 7402615,
+      "train_seconds": 78.2,
+      "gate": "brier 0.1713 > champion 0.1688",
+      "gate_champion_brier": 0.1688,
+      "gate_challenger_brier": 0.1713,
+      "promoted": false
+    },
+    {
+      "day": "2020-02-01",
+      "action": "retrain",
+      "reason": "schedule",
+      "alarms": [],
+      "challenger": "v15",
+      "train_rows": 7420000,
+      "train_seconds": 66.4,
+      "gate": "brier 0.1133 > champion 0.1070",
+      "gate_champion_brier": 0.107,
+      "gate_challenger_brier": 0.1133,
+      "promoted": false
+    },
+    {
+      "day": "2020-03-01",
+      "action": "retrain",
+      "reason": "schedule",
+      "alarms": [],
+      "challenger": "v16",
+      "train_rows": 7443633,
+      "train_seconds": 62.3,
+      "gate": "brier 0.1326 > champion 0.1201",
+      "gate_champion_brier": 0.1201,
+      "gate_challenger_brier": 0.1326,
+      "promoted": false
+    },
+    {
+      "day": "2020-04-01",
+      "action": "retrain",
+      "reason": "schedule",
+      "alarms": [],
+      "challenger": "v17",
+      "train_rows": 7462244,
+      "train_seconds": 61.5,
+      "gate": "better brier, auc held",
+      "gate_champion_brier": 0.3794,
+      "gate_challenger_brier": 0.302,
+      "promoted": true
+    },
+    {
+      "day": "2020-05-01",
+      "action": "retrain",
+      "reason": "schedule",
+      "alarms": [],
+      "challenger": "v18",
+      "train_rows": 7249739,
+      "train_seconds": 57.0,
+      "gate": "better brier, auc held",
+      "gate_champion_brier": 0.299,
+      "gate_challenger_brier": 0.2445,
+      "promoted": true
+    },
+    {
+      "day": "2020-06-01",
+      "action": "retrain",
+      "reason": "schedule",
+      "alarms": [],
+      "challenger": "v19",
+      "train_rows": 6813241,
+      "train_seconds": 42.5,
+      "gate": "better brier, auc held",
+      "gate_champion_brier": 0.0795,
+      "gate_challenger_brier": 0.0638,
+      "promoted": true
+    }
+  ]
+}

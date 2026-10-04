@@ -1,0 +1,718 @@
+{
+  "name": "driftops_8w",
+  "args": {
+    "policy": "driftops",
+    "window": "8w",
+    "no_gate": false,
+    "no_guard": false,
+    "corrupt": "none",
+    "threads": 2,
+    "name": "driftops_8w"
+  },
+  "retrains": 11,
+  "promotions": 10,
+  "blocks": 0,
+  "periods": {
+    "2019 control": {
+      "brier": 0.16025,
+      "mean_daily_auc": 0.6385
+    },
+    "2020 Jan-Feb": {
+      "brier": 0.14118,
+      "mean_daily_auc": 0.5778
+    },
+    "2020 Mar-Apr shock": {
+      "brier": 0.23033,
+      "mean_daily_auc": 0.5579
+    },
+    "2020 May-Jun empty skies": {
+      "brier": 0.08535,
+      "mean_daily_auc": 0.6288
+    },
+    "all": {
+      "brier": 0.16171,
+      "mean_daily_auc": 0.6218
+    }
+  },
+  "events": [
+    {
+      "day": "2020-03-26",
+      "action": "wait",
+      "reason": "alarm 1/3",
+      "alarms": [
+        "label:calibration_gap"
+      ]
+    },
+    {
+      "day": "2020-03-27",
+      "action": "wait",
+      "reason": "alarm 2/3",
+      "alarms": [
+        "label:calibration_gap"
+      ]
+    },
+    {
+      "day": "2020-03-28",
+      "action": "retrain",
+      "reason": "sustained drift, data clean",
+      "alarms": [
+        "label:calibration_gap"
+      ],
+      "challenger": "v2",
+      "train_rows": 1133711,
+      "train_seconds": 35.5,
+      "gate": "better brier, auc held",
+      "gate_champion_brier": 0.3235,
+      "gate_challenger_brier": 0.2941,
+      "promoted": true
+    },
+    {
+      "day": "2020-03-29",
+      "action": "wait",
+      "reason": "alarm 1/3",
+      "alarms": [
+        "label:calibration_gap",
+        "label:brier"
+      ]
+    },
+    {
+      "day": "2020-03-30",
+      "action": "wait",
+      "reason": "alarm 2/3",
+      "alarms": [
+        "label:calibration_gap",
+        "label:brier"
+      ]
+    },
+    {
+      "day": "2020-03-31",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "label:calibration_gap",
+        "label:brier"
+      ]
+    },
+    {
+      "day": "2020-04-01",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "label:calibration_gap",
+        "label:brier"
+      ]
+    },
+    {
+      "day": "2020-04-02",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "label:calibration_gap",
+        "label:brier"
+      ]
+    },
+    {
+      "day": "2020-04-03",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "label:calibration_gap",
+        "label:brier"
+      ]
+    },
+    {
+      "day": "2020-04-04",
+      "action": "retrain",
+      "reason": "sustained drift, data clean",
+      "alarms": [
+        "label:calibration_gap",
+        "label:brier"
+      ],
+      "challenger": "v3",
+      "train_rows": 1143792,
+      "train_seconds": 37.6,
+      "gate": "better brier, auc held",
+      "gate_champion_brier": 0.3675,
+      "gate_challenger_brier": 0.2652,
+      "promoted": true
+    },
+    {
+      "day": "2020-04-05",
+      "action": "wait",
+      "reason": "alarm 1/3",
+      "alarms": [
+        "label:calibration_gap",
+        "label:brier"
+      ]
+    },
+    {
+      "day": "2020-04-06",
+      "action": "wait",
+      "reason": "alarm 2/3",
+      "alarms": [
+        "label:calibration_gap",
+        "label:brier"
+      ]
+    },
+    {
+      "day": "2020-04-07",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "label:calibration_gap",
+        "label:brier"
+      ]
+    },
+    {
+      "day": "2020-04-08",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:carrier",
+        "label:calibration_gap",
+        "label:brier"
+      ]
+    },
+    {
+      "day": "2020-04-09",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load",
+        "label:calibration_gap"
+      ]
+    },
+    {
+      "day": "2020-04-10",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-04-11",
+      "action": "retrain",
+      "reason": "sustained drift, data clean",
+      "alarms": [
+        "feature:dest_hour_load"
+      ],
+      "challenger": "v4",
+      "train_rows": 1136309,
+      "train_seconds": 41.6,
+      "gate": "better brier, auc held",
+      "gate_champion_brier": 0.2741,
+      "gate_challenger_brier": 0.2386,
+      "promoted": true
+    },
+    {
+      "day": "2020-04-12",
+      "action": "wait",
+      "reason": "alarm 1/3",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-04-13",
+      "action": "wait",
+      "reason": "alarm 2/3",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-04-14",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-04-15",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-04-16",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-04-17",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-04-18",
+      "action": "retrain",
+      "reason": "sustained drift, data clean",
+      "alarms": [
+        "feature:origin_hour_load"
+      ],
+      "challenger": "v5",
+      "train_rows": 1090906,
+      "train_seconds": 40.0,
+      "gate": "better brier, auc held",
+      "gate_champion_brier": 0.2598,
+      "gate_challenger_brier": 0.2283,
+      "promoted": true
+    },
+    {
+      "day": "2020-04-19",
+      "action": "wait",
+      "reason": "alarm 1/3",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-04-20",
+      "action": "wait",
+      "reason": "alarm 2/3",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-04-21",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-04-22",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-04-23",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-04-24",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-04-25",
+      "action": "retrain",
+      "reason": "sustained drift, data clean",
+      "alarms": [
+        "feature:origin_hour_load"
+      ],
+      "challenger": "v6",
+      "train_rows": 1017791,
+      "train_seconds": 33.9,
+      "gate": "better brier, auc held",
+      "gate_champion_brier": 0.2393,
+      "gate_challenger_brier": 0.2091,
+      "promoted": true
+    },
+    {
+      "day": "2020-04-26",
+      "action": "wait",
+      "reason": "alarm 1/3",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-04-27",
+      "action": "wait",
+      "reason": "alarm 2/3",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-04-28",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-04-29",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-04-30",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-01",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load",
+        "label:calibration_gap"
+      ]
+    },
+    {
+      "day": "2020-05-02",
+      "action": "retrain",
+      "reason": "sustained drift, data clean",
+      "alarms": [
+        "feature:origin_hour_load",
+        "label:calibration_gap"
+      ],
+      "challenger": "v7",
+      "train_rows": 932137,
+      "train_seconds": 37.3,
+      "gate": "better brier, auc held",
+      "gate_champion_brier": 0.2765,
+      "gate_challenger_brier": 0.2676,
+      "promoted": true
+    },
+    {
+      "day": "2020-05-03",
+      "action": "wait",
+      "reason": "alarm 1/3",
+      "alarms": [
+        "feature:origin_hour_load",
+        "label:calibration_gap"
+      ]
+    },
+    {
+      "day": "2020-05-04",
+      "action": "wait",
+      "reason": "alarm 2/3",
+      "alarms": [
+        "feature:origin_hour_load",
+        "label:calibration_gap"
+      ]
+    },
+    {
+      "day": "2020-05-05",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load",
+        "label:calibration_gap"
+      ]
+    },
+    {
+      "day": "2020-05-06",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-07",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-08",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:dest_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-09",
+      "action": "retrain",
+      "reason": "sustained drift, data clean",
+      "alarms": [
+        "feature:origin_hour_load"
+      ],
+      "challenger": "v8",
+      "train_rows": 843762,
+      "train_seconds": 36.8,
+      "gate": "brier 0.1280 > champion 0.1121",
+      "gate_champion_brier": 0.1121,
+      "gate_challenger_brier": 0.128,
+      "promoted": false
+    },
+    {
+      "day": "2020-05-10",
+      "action": "wait",
+      "reason": "alarm 1/3",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-11",
+      "action": "wait",
+      "reason": "alarm 2/3",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-12",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-13",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-14",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-15",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-16",
+      "action": "retrain",
+      "reason": "sustained drift, data clean",
+      "alarms": [
+        "feature:origin_hour_load"
+      ],
+      "challenger": "v9",
+      "train_rows": 737406,
+      "train_seconds": 33.2,
+      "gate": "better brier, auc held",
+      "gate_champion_brier": 0.0832,
+      "gate_challenger_brier": 0.0662,
+      "promoted": true
+    },
+    {
+      "day": "2020-05-17",
+      "action": "wait",
+      "reason": "alarm 1/3",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-18",
+      "action": "wait",
+      "reason": "alarm 2/3",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-19",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-20",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-21",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-22",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-23",
+      "action": "retrain",
+      "reason": "sustained drift, data clean",
+      "alarms": [
+        "feature:origin_hour_load"
+      ],
+      "challenger": "v10",
+      "train_rows": 627020,
+      "train_seconds": 26.9,
+      "gate": "better brier, auc held",
+      "gate_champion_brier": 0.0652,
+      "gate_challenger_brier": 0.0631,
+      "promoted": true
+    },
+    {
+      "day": "2020-05-24",
+      "action": "wait",
+      "reason": "alarm 1/3",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-25",
+      "action": "wait",
+      "reason": "alarm 2/3",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-26",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-27",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-28",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-29",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-05-30",
+      "action": "retrain",
+      "reason": "sustained drift, data clean",
+      "alarms": [
+        "feature:origin_hour_load"
+      ],
+      "challenger": "v11",
+      "train_rows": 520124,
+      "train_seconds": 20.9,
+      "gate": "better brier, auc held",
+      "gate_champion_brier": 0.0712,
+      "gate_challenger_brier": 0.0639,
+      "promoted": true
+    },
+    {
+      "day": "2020-05-31",
+      "action": "wait",
+      "reason": "alarm 1/3",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-06-01",
+      "action": "wait",
+      "reason": "alarm 2/3",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-06-02",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-06-03",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-06-04",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-06-05",
+      "action": "wait",
+      "reason": "cooldown",
+      "alarms": [
+        "feature:origin_hour_load"
+      ]
+    },
+    {
+      "day": "2020-06-06",
+      "action": "retrain",
+      "reason": "sustained drift, data clean",
+      "alarms": [
+        "feature:origin_hour_load"
+      ],
+      "challenger": "v12",
+      "train_rows": 432608,
+      "train_seconds": 23.9,
+      "gate": "better brier, auc held",
+      "gate_champion_brier": 0.0669,
+      "gate_challenger_brier": 0.0659,
+      "promoted": true
+    }
+  ]
+}
