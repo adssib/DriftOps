@@ -42,19 +42,59 @@ Brier score, lower is better. → [Retrain-policy backtest](docs/research/02-ret
 
 ## The system
 
-```
-simulator ──► model server ──► Postgres ◄── label feeder
-                   │               │
-               Prometheus   data quality · feature drift · label drift   (CronJobs)
-                   │               │
-                   │          controller ──► "pipeline broke" → block, alert a human
-                   │               │
-                   │          retrain Job ──► gate ──► MLflow ──► promote
-                   └───────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+  SIM["Simulator<br/>replays 2020 on a simulated clock"]
+  USER["Web form"]
+  SRV["Model server<br/>FastAPI · pinned model version"]
+  REG[("MLflow<br/>model registry")]
+  PG[("Postgres<br/>flights · predictions · outcomes<br/>monitor results · loop events")]
+  FEED["Label feeder<br/>outcomes arrive late"]
+  PROM[("Prometheus")]
+  GRAF["Grafana"]
+
+  subgraph monitors["Monitors · a CronJob each, every minute"]
+    direction LR
+    DQ["Data quality"]
+    FD["Feature drift"]
+    LD["Label drift"]
+  end
+
+  CTRL{"Controller"}
+  RT["Retrain Job<br/>train → gate"]
+  HUMAN(["On-call human"])
+
+  SIM --> SRV
+  USER --> SRV
+  REG -- "model bundle" --> SRV
+  SRV -- "predictions" --> PG
+  SRV -- "metrics" --> PROM
+  FEED -- "outcomes" --> PG
+  PG <-- "windows · results" --> monitors
+  PG --> CTRL
+  CTRL -- "drift, data clean" --> RT
+  CTRL -. "data broken: block" .-> HUMAN
+  RT -- "challenger, then promote" --> REG
+  PROM --> GRAF
+  PG --> GRAF
+
+  classDef traffic fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
+  classDef serve fill:#eef2ff,stroke:#6366f1,color:#1e1b4b
+  classDef store fill:#f1f5f9,stroke:#64748b,color:#0f172a
+  classDef mon fill:#fef3c7,stroke:#d97706,color:#78350f
+  classDef act fill:#dcfce7,stroke:#16a34a,color:#14532d
+  classDef guard fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+  class SIM,USER traffic
+  class SRV serve
+  class PG,REG,PROM,GRAF,FEED store
+  class DQ,FD,LD mon
+  class CTRL,RT act
+  class HUMAN guard
 ```
 
 One image, one Helm chart, k3d locally, 30-minute AKS sessions on demand. The controller and the
-gate are the same code the backtest ran. → [Architecture](docs/ARCHITECTURE.md)
+gate are the same code the backtest ran. → [Architecture](docs/ARCHITECTURE.md) (the controller's
+decision and one retrain step by step)
 
 ## Run it
 

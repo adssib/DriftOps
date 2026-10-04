@@ -72,6 +72,8 @@ defend, written down.
 - Every non-trivial decision gets an ADR (template `docs/decisions/0000`). A changed decision gets
   a new ADR; the old one is marked Superseded.
 - Present tense means it exists; anything else is marked with its phase.
+- Diagrams are Mermaid blocks (GitHub renders them). Each diagram lives in exactly one doc; others
+  link to it. Never draw ASCII diagrams.
 
 ## Commit attribution
 

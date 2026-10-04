@@ -7,24 +7,8 @@
 
 ## 1. The loop
 
-```mermaid
-flowchart LR
-  SIM["simulator<br/>replays BTS flights<br/>on a simulated clock"] -->|POST /predict| SRV["model server<br/>FastAPI · pinned version"]
-  UI["web form"] -->|"POST /predict<br/>source=user"| SRV
-  SRV -->|async batches| PG[("Postgres<br/>flights · predictions · outcomes<br/>monitor_results · loop_events")]
-  FEED["label feeder<br/>outcomes arrive late"] --> PG
-  SRV -->|/metrics| PROM[("Prometheus")]
-  PG --> DQ["data quality"] & DRIFT["feature drift"] & PERF["label drift"]
-  DQ & DRIFT & PERF -->|monitor_results| PG
-  PG --> CTRL{"controller"}
-  CTRL -->|"world changed"| TRAIN["retrain Job<br/>train → gate"]
-  CTRL -->|"pipeline broke"| PAGE["alert a human<br/>quarantine, no retrain"]
-  TRAIN --> REG[("MLflow registry")]
-  TRAIN -->|"gate passed"| ROLL["promote<br/>(canary in Phase 4)"]
-  ROLL --> SRV
-  REG --> SRV
-  PROM & PG --> GRAF["Grafana"]
-```
+The system diagram is in the [README](../README.md#the-system); this section says what each
+phase adds to it.
 
 | Phase | Adds |
 |---|---|
@@ -94,14 +78,81 @@ pacing artefact, measured and reported, not hidden.
 | **control** | 1 min | decisions → `loop_events`; creates the retrain Job | see policy | 3 |
 | **retrain** (Job) | on demand | challenger + gate result → MLflow, `loop_events`; on pass, the new pinned version | — | 3 |
 
-**Policy** (`driftops/policy.py`, unchanged from the backtest):
+**Policy** (`driftops/policy.py`, unchanged from the backtest): K = 3 alarm windows in a row, a
+7-day cooldown, at least 50k labelled rows.
 
+```mermaid
+flowchart LR
+  DAY["Simulated<br/>day done"] --> Q{"Quality<br/>breached?"}
+  Q -- no --> T{"Window still<br/>tainted?"}
+  T -- no --> D{"Drift 3 days<br/>in a row?"}
+  D -- yes --> C{"Cooldown over,<br/>enough labels?"}
+  C -- yes --> TRAIN["Retrain<br/>8 weeks to D−8"]
+  TRAIN --> G{"Beats champion<br/>on D−7…D−1?"}
+  G -- yes --> PROMOTE["Promote"]
+
+  Q -- yes --> BLOCK["Block · quarantine<br/>alert a human"]
+  T -- yes --> WAIT1["Wait"]
+  D -- no --> NOTHING["Do nothing"]
+  C -- no --> WAIT2["Wait"]
+  G -- no --> REJECT["Reject<br/>keep champion"]
+
+  classDef step fill:#eef2ff,stroke:#6366f1,color:#1e1b4b
+  classDef ask fill:#f8fafc,stroke:#64748b,color:#0f172a
+  classDef bad fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+  classDef good fill:#dcfce7,stroke:#16a34a,color:#14532d
+  classDef idle fill:#f1f5f9,stroke:#94a3b8,color:#334155
+  class DAY,TRAIN step
+  class Q,T,D,C,G ask
+  class BLOCK,REJECT bad
+  class PROMOTE good
+  class WAIT1,WAIT2,NOTHING idle
 ```
-data quality breached          → block, quarantine the window, alert a human
-window still holds breached days → wait
-feature OR label alarm, K=3 windows in a row
-  AND cooldown (7 days) passed
-  AND ≥ 50k labelled rows      → retrain
+
+**One retrain, in order** (Phase 3):
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant SIM as Simulator
+  participant SRV as Model server
+  participant PG as Postgres
+  participant MON as Monitors
+  participant CTRL as Controller
+  participant JOB as Retrain Job
+  participant REG as MLflow
+  participant K8S as Kubernetes API
+
+  loop every request
+    SIM->>SRV: POST /predict
+    SRV-->>SIM: p_disrupted, version, reasons
+    SRV-)PG: log prediction (async batch)
+  end
+
+  loop every minute, one simulated day at a time
+    MON->>PG: read windows since watermark
+    MON->>PG: upsert quality · drift · perf results
+  end
+
+  CTRL->>PG: read results for day D
+  Note over CTRL: label drift 3 windows in a row,<br/>data clean, cooldown passed
+  CTRL->>PG: loop_events: retrain(D)
+  CTRL->>K8S: create retrain Job for day D
+
+  JOB->>PG: flights ⋈ outcomes, D−63 … D−8
+  JOB->>JOB: train challenger
+  JOB->>REG: register version n+1
+  JOB->>PG: newest 7 labelled days, D−7 … D−1
+  JOB->>JOB: gate: challenger vs champion
+
+  alt gate passed
+    JOB->>REG: alias champion → n+1
+    JOB->>K8S: pin DRIFTOPS_MODEL_VERSION = n+1
+    K8S->>SRV: rolling update to version n+1
+    JOB->>PG: loop_events: promoted
+  else gate rejected
+    JOB->>PG: loop_events: rejected
+  end
 ```
 
 **Retrain:** LightGBM on the 8 weeks of labelled flights ending 8 days before the decision,

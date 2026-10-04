@@ -34,4 +34,6 @@ the quality guard the loop retrains on corrupted data and the gate lets it throu
 - **Every non-trivial decision gets an ADR.** A changed decision gets a new ADR; the old one is
   marked Superseded, never rewritten.
 - **Present tense means it exists.** Anything not built yet is marked with its phase.
-- **Diagrams are Mermaid** in the Markdown, so they render on GitHub and diff as text.
+- **Diagrams are Mermaid blocks** that GitHub renders natively. **Each diagram lives in one place**:
+  the system diagram in the README, the decision and sequence diagrams in ARCHITECTURE. Link to a
+  diagram; never copy it.
