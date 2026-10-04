@@ -1,0 +1,18 @@
+{
+  "control_2019": {
+    "max_abs_calibration_gap": 0.1053,
+    "worst_gap_day": "2019-07-29",
+    "max_brier": 0.2174
+  },
+  "thresholds": {
+    "abs_calibration_gap": 0.158,
+    "brier": 0.3261
+  },
+  "false_alarm_days_2019": 0,
+  "covid": {
+    "sustained_alarm_on": "2020-03-27",
+    "days_after_march_1": 26,
+    "first_single_alarm": "2020-03-25"
+  },
+  "k_consecutive": 3
+}

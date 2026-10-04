@@ -1,0 +1,28 @@
+[project]
+name = "driftops"
+version = "0.1.0"
+description = "Closed-loop MLOps on Kubernetes: drift detection, guarded retraining, canary rollout."
+requires-python = ">=3.12"
+dependencies = [
+  "pandas>=2.2",
+  "pyarrow>=17",
+  "numpy>=2.0",
+  "scipy>=1.14",
+  "scikit-learn>=1.5",
+  "lightgbm>=4.5",
+  "matplotlib>=3.9",
+  "pyyaml>=6.0",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,260 @@
+{
+  "row_counts": {
+    "2018-01": 570138,
+    "2018-02": 520769,
+    "2018-03": 612034,
+    "2018-04": 596078,
+    "2018-05": 616573,
+    "2018-06": 626217,
+    "2018-07": 645317,
+    "2018-08": 637103,
+    "2018-09": 585765,
+    "2018-10": 616128,
+    "2018-11": 586231,
+    "2018-12": 593842,
+    "2019-01": 583985,
+    "2019-02": 533175,
+    "2019-03": 632074,
+    "2019-04": 612023,
+    "2019-05": 636390,
+    "2019-06": 636691,
+    "2019-07": 659029,
+    "2019-08": 658461,
+    "2019-09": 605979,
+    "2019-10": 636014,
+    "2019-11": 602453,
+    "2019-12": 625763,
+    "2020-01": 607346,
+    "2020-02": 574268,
+    "2020-03": 648229,
+    "2020-04": 313382,
+    "2020-05": 180617,
+    "2020-06": 223732
+  },
+  "champion_v1": {
+    "train_rows": 6846643,
+    "train_seconds": 97.0,
+    "threads": 2,
+    "best_iteration": 400,
+    "holdout_auc_2018": 0.7535,
+    "holdout_brier_2018": 0.1372,
+    "base_rate_2018": 0.2063
+  },
+  "monthly_performance": [
+    {
+      "month": "2019-01",
+      "flights": 583985,
+      "disrupted_rate": 0.211,
+      "mean_score": 0.2082,
+      "auc": 0.632,
+      "brier": 0.1633
+    },
+    {
+      "month": "2019-02",
+      "flights": 533175,
+      "disrupted_rate": 0.2557,
+      "mean_score": 0.2141,
+      "auc": 0.5966,
+      "brier": 0.1941
+    },
+    {
+      "month": "2019-03",
+      "flights": 632074,
+      "disrupted_rate": 0.1896,
+      "mean_score": 0.1858,
+      "auc": 0.6056,
+      "brier": 0.1543
+    },
+    {
+      "month": "2019-04",
+      "flights": 612023,
+      "disrupted_rate": 0.2035,
+      "mean_score": 0.1822,
+      "auc": 0.6255,
+      "brier": 0.1575
+    },
+    {
+      "month": "2019-05",
+      "flights": 636390,
+      "disrupted_rate": 0.2221,
+      "mean_score": 0.2065,
+      "auc": 0.6514,
+      "brier": 0.1674
+    },
+    {
+      "month": "2019-06",
+      "flights": 636691,
+      "disrupted_rate": 0.2657,
+      "mean_score": 0.2306,
+      "auc": 0.6727,
+      "brier": 0.1844
+    },
+    {
+      "month": "2019-07",
+      "flights": 659029,
+      "disrupted_rate": 0.2289,
+      "mean_score": 0.237,
+      "auc": 0.6775,
+      "brier": 0.1668
+    },
+    {
+      "month": "2019-08",
+      "flights": 658461,
+      "disrupted_rate": 0.2223,
+      "mean_score": 0.235,
+      "auc": 0.6786,
+      "brier": 0.1645
+    },
+    {
+      "month": "2019-09",
+      "flights": 605979,
+      "disrupted_rate": 0.1565,
+      "mean_score": 0.1882,
+      "auc": 0.6242,
+      "brier": 0.1351
+    },
+    {
+      "month": "2019-10",
+      "flights": 636014,
+      "disrupted_rate": 0.1752,
+      "mean_score": 0.1741,
+      "auc": 0.634,
+      "brier": 0.141
+    },
+    {
+      "month": "2019-11",
+      "flights": 602453,
+      "disrupted_rate": 0.151,
+      "mean_score": 0.1906,
+      "auc": 0.6133,
+      "brier": 0.1317
+    },
+    {
+      "month": "2019-12",
+      "flights": 625763,
+      "disrupted_rate": 0.2143,
+      "mean_score": 0.1948,
+      "auc": 0.6273,
+      "brier": 0.1654
+    },
+    {
+      "month": "2020-01",
+      "flights": 607346,
+      "disrupted_rate": 0.1488,
+      "mean_score": 0.2007,
+      "auc": 0.5735,
+      "brier": 0.1376
+    },
+    {
+      "month": "2020-02",
+      "flights": 574268,
+      "disrupted_rate": 0.1581,
+      "mean_score": 0.2114,
+      "auc": 0.5708,
+      "brier": 0.1449
+    },
+    {
+      "month": "2020-03",
+      "flights": 648229,
+      "disrupted_rate": 0.2541,
+      "mean_score": 0.1781,
+      "auc": 0.5125,
+      "brier": 0.2058
+    },
+    {
+      "month": "2020-04",
+      "flights": 313382,
+      "disrupted_rate": 0.4449,
+      "mean_score": 0.1711,
+      "auc": 0.5297,
+      "brier": 0.3248
+    },
+    {
+      "month": "2020-05",
+      "flights": 180617,
+      "disrupted_rate": 0.1094,
+      "mean_score": 0.1899,
+      "auc": 0.538,
+      "brier": 0.1147
+    },
+    {
+      "month": "2020-06",
+      "flights": 223732,
+      "disrupted_rate": 0.072,
+      "mean_score": 0.2206,
+      "auc": 0.5917,
+      "brier": 0.1002
+    }
+  ],
+  "control_2019": {
+    "psi_max_feature_p50": 0.019,
+    "psi_max_feature_p99": 0.0276,
+    "psi_max_feature_max": 0.0296,
+    "worst_feature_at_max": "carrier",
+    "psi_score_max": 0.379
+  },
+  "thresholds": {
+    "psi_feature": 0.1,
+    "psi_score": 0.5685
+  },
+  "covid": {
+    "false_alarm_days_2019": 0,
+    "sustained_alarm_on": "2020-04-10",
+    "days_after_march_1": 40,
+    "worst_feature_then": "origin_hour_load"
+  },
+  "sensitivity_hub_shift": [
+    {
+      "rate_per_day": 0.005,
+      "days_to_detect": 182
+    },
+    {
+      "rate_per_day": 0.01,
+      "days_to_detect": 75
+    },
+    {
+      "rate_per_day": 0.02,
+      "days_to_detect": 37
+    },
+    {
+      "rate_per_day": 0.05,
+      "days_to_detect": 2
+    },
+    {
+      "rate_per_day": 0.1,
+      "days_to_detect": 2
+    }
+  ],
+  "corruptions": [
+    {
+      "kind": "distance_km",
+      "psi_max_feature_peak": 0.3473,
+      "worst_feature": "distance",
+      "drift_alarm": true,
+      "route_distance_mismatch_peak": 0.9754,
+      "null_increase_peak": 0.0,
+      "unseen_category_peak": 0.003,
+      "out_of_range_peak": 0.005
+    },
+    {
+      "kind": "null_load",
+      "psi_max_feature_peak": 0.024,
+      "worst_feature": "carrier",
+      "drift_alarm": false,
+      "route_distance_mismatch_peak": 0.0,
+      "null_increase_peak": 0.31,
+      "unseen_category_peak": 0.003,
+      "out_of_range_peak": 0.002
+    },
+    {
+      "kind": "unseen_carrier",
+      "psi_max_feature_peak": 1.8215,
+      "worst_feature": "carrier",
+      "drift_alarm": true,
+      "route_distance_mismatch_peak": 0.0,
+      "null_increase_peak": 0.0,
+      "unseen_category_peak": 0.1297,
+      "out_of_range_peak": 0.002
+    }
+  ]
+}

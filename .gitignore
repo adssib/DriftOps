@@ -1,0 +1,9 @@
+.venv*/
+__pycache__/
+*.pyc
+data/
+vendor/
+.ipynb_checkpoints/
+mlruns/
+*.egg-info/
+reports/**/champion_*.txt
