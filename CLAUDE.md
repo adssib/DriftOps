@@ -38,14 +38,8 @@ defend, written down.
 
 ## Stack
 
-| Piece | Choice |
-|---|---|
-| Model | LightGBM 4.x, categorical features natively, SHAP via `pred_contrib` |
-| Serving | FastAPI + uvicorn, model in memory, pinned version (ADR-0007, 0013) |
-| Storage | Postgres 17, one instance; psycopg 3 (`COPY` for bulk) |
-| Registry | MLflow 3.x server from our image; Postgres backend, artifacts on a volume (ADR-0012) |
-| Cluster | k3d locally, one Helm chart; AKS for sessions (ADR-0015) |
-| Python | 3.12, `uv`; pandas 3, numpy 2 |
+Every tool, layer by layer: `docs/STACK.md`. How it's run (probes, SLOs, alerts, rollback,
+security, capacity): `docs/OPERATIONS.md`.
 
 ## Commands
 

@@ -8,6 +8,8 @@ Start here. The docs are split by **purpose**.
 | [ARCHITECTURE.md](ARCHITECTURE.md) | **How** it's shaped: the loop, components, jobs, dashboards, pacing, limits. |
 | [ROADMAP.md](ROADMAP.md) | **In what order**: the phases, the cut line, the definition of done. |
 | [EVAL.md](EVAL.md) | **How it's measured**: every metric the results tables use. |
+| [STACK.md](STACK.md) | **With what**: every tool, layer by layer, and the phase it arrives in. |
+| [OPERATIONS.md](OPERATIONS.md) | **How it's run**: health checks, SLOs, alerts, rollback, API security, logging, capacity and cost. |
 | [research/](research/) | **Why this design**: the detection study and the retrain-policy backtest, with numbers. |
 | [decisions/](decisions/) | **Why each choice**: Architecture Decision Records. |
 | [findings/](findings/) | Things learned from other people's code (pulsar-metrics). |

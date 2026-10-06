@@ -21,3 +21,7 @@ Template: [0000](0000-adr-template.md).
 | [0013](0013-promotion-pins-a-version.md) | Promotion pins a model version in the pod spec | 1 |
 | [0014](0014-seeded-history-for-demo-pacing.md) | Seed history, start the scenario at the shock | 1 |
 | [0015](0015-k3d-first-aks-for-sessions.md) | Build and test on k3d; AKS only for 30-minute sessions | 1 |
+| [0016](0016-no-service-mesh-yet.md) | No service mesh (yet) | 7 |
+| [0017](0017-one-chart-values-per-environment.md) | One Helm chart, one values file per environment, helmfile for upstream charts | 1 |
+| [0018](0018-loki-and-alloy-no-tracing-yet.md) | Logs in Loki via Alloy; no tracing yet | 2 |
+| [0019](0019-identity-decides-source.md) | The caller's identity decides `source`, never the request body | 1 |

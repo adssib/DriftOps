@@ -71,6 +71,7 @@ windows: a visitor clicking "Christmas Eve, ORD" twenty times must not cause a r
 | Table | Holds | Written by |
 |---|---|---|
 | `flights` | the 2020 H1 schedule with precomputed features, one row per flight | seed (1) |
+| `routes` | route distance and scheduled minutes per (origin, dest), derived from `flights` | seed (1) |
 | `outcomes_feed` | every flight's outcome and `known_at` (actual arrival; scheduled arrival if cancelled) | seed (1) |
 | `outcomes` | outcomes that have "arrived" by simulated now | label feeder (2) |
 | `predictions` | one row per request: `request_id`, `flight_id` (nullable), `source`, `event_time`, `model_version`, `features` jsonb, `score`, `latency_ms` | model server (1) |
@@ -78,6 +79,22 @@ windows: a visitor clicking "Christmas Eve, ORD" twenty times must not cause a r
 | `loop_events` | every controller decision and its outcome | controller, retrain Job (3) |
 | `sim_clock` | the single simulated "now", scenario and segment | simulator (1) |
 | `watermarks` | last processed event time per consumer | feeder, monitors (2) |
+
+**Indexes**, chosen for the queries that actually run:
+
+| Table | Index | Serves |
+|---|---|---|
+| `flights` | PK `flight_id`; `(flight_date, origin, dep_hour)` | schedule-feature lookup for user requests; seed and retrain range scans |
+| `routes` (derived) | PK `(origin, dest)` | route distance and scheduled minutes for user requests |
+| `outcomes_feed` | `known_at` | the label feeder's "what has arrived since the watermark" scan |
+| `outcomes` | PK `flight_id` | the predictions ⋈ outcomes join; retrain's flights ⋈ outcomes |
+| `predictions` | **range-partitioned by day on `event_time`**; **BRIN** on `event_time`; partial b-tree on `event_time WHERE source = 'sim'`; b-tree on `flight_id`; b-tree on `request_id` | window scans by the monitors (BRIN: rows arrive in time order, so a tiny index prunes almost everything); the outcomes join; support lookups by request |
+| `monitor_results` | unique `(monitor, window_end, model_version)` | idempotent upserts from retried CronJobs |
+| `loop_events` | `(created_at)`; `(kind, created_at)` | the loop dashboard's timeline |
+
+Why BRIN and partitions on `predictions`: it is append-only and time-ordered, read in time windows,
+and the biggest table. A b-tree on `event_time` would cost as much to maintain as it saves;
+dropping a day's partition is instant where `DELETE` is not.
 
 ## 6. Interfaces
 
@@ -104,8 +121,12 @@ python -m driftops <command>
 | `GET /metrics` | Prometheus: request count and latency by `model_version`, `predictions_logged_total`, `predictions_dropped_total` |
 
 `POST /predict` body: `carrier`, `origin`, `dest`, `flight_date`, `dep_time` ("HH:MM"), and
-optionally `flight_id`, `source` (`sim` | `user`, default `user`) and any feature value. Missing
-schedule features are filled from the `flights` table (the online feature lookup).
+optionally `flight_id` and any feature value. Missing schedule features are filled from the
+`flights` table (the online feature lookup). Validation rules: OPERATIONS § 5.
+
+**`source` is derived from the caller's identity** (in-cluster simulator → `sim`, everyone else →
+`user`), never read from the body: a client that could claim `sim` could poison the drift windows
+(ADR-0019).
 
 ### Configuration
 

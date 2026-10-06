@@ -13,10 +13,12 @@ phase adds to it.
 | Phase | Adds |
 |---|---|
 | 1 | simulator, model server, prediction logging, Postgres, MLflow, seed |
-| 2 | label feeder, the three monitors, Prometheus and Grafana |
+| 2 | label feeder, the three monitors, Prometheus, Grafana, Loki, alerts |
 | 3 | controller, retrain Job with the gate, promotion |
 | 4 | Argo Rollouts canary with automatic rollback |
 | 6 | the same chart on AKS, 30-minute sessions |
+| 7 | API keys, OIDC, rate limits, NetworkPolicies, operator API |
+| 8 | load tests, KEDA, the measured capacity and cost model |
 
 ## 2. Two signals and a guard (the research result the design rests on)
 
