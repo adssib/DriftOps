@@ -1,0 +1,44 @@
+{{- if .Values.seed.enabled }}
+# Named by revision so `helm upgrade` creates a fresh Job instead of patching an immutable one.
+# The seed is idempotent: re-running it loads nothing twice (Phase 1 review focus 5).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-seed-{{ .Release.Revision }}
+  labels:
+    {{- include "driftops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: seed
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        {{- include "driftops.labels" . | nindent 8 }}
+        app.kubernetes.io/component: seed
+    spec:
+      restartPolicy: OnFailure
+      {{- include "driftops.podSecurity" . | nindent 6 }}
+      initContainers: {{- include "driftops.waitForPostgres" . | nindent 8 }}
+      containers:
+        - name: seed
+          image: {{ include "driftops.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["seed", "--months", {{ .Values.seed.months | quote }}, "--history-until", {{ .Values.seed.historyUntil | quote }}]
+          env:
+            {{- include "driftops.env" . | nindent 12 }}
+            - {name: DRIFTOPS_SEED_DIR, value: /data}
+          resources: {{- toYaml .Values.seed.resources | nindent 12 }}
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          volumeMounts:
+            - {name: data, mountPath: /data, readOnly: true}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: data
+          {{- if .Values.seed.hostPath }}
+          hostPath: {path: {{ .Values.seed.hostPath }}, type: Directory}
+          {{- else }}
+          emptyDir: {}       # Phase 6: an init container downloads the data from a Release
+          {{- end }}
+        - {name: tmp, emptyDir: {}}
+{{- end }}

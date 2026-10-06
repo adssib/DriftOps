@@ -1,0 +1,20 @@
+# AKS session (Phase 6): image from GHCR by commit SHA, Azure disks, real limits.
+image:
+  repository: ghcr.io/adssib/driftops
+  pullPolicy: IfNotPresent
+postgres:
+  storage: 10Gi
+  storageClass: managed-csi
+  resources:
+    requests: {cpu: "1", memory: 2Gi}
+    limits: {memory: 4Gi}
+mlflow:
+  storageClass: managed-csi
+seed:
+  hostPath: ""            # Phase 6: the seed Job downloads the data from a GitHub Release
+server:
+  replicas: 2
+  corsOrigins: "https://adssib.github.io"
+  resources:
+    requests: {cpu: "1", memory: 1Gi}
+    limits: {cpu: "1", memory: 1Gi}

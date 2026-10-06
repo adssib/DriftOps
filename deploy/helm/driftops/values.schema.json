@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["image", "model", "postgres", "mlflow", "seed", "server", "simulator", "ingress"],
+  "properties": {
+    "image": {
+      "type": "object",
+      "required": ["repository", "tag"],
+      "properties": {
+        "repository": {"type": "string", "minLength": 1},
+        "tag": {"type": "string", "minLength": 1},
+        "pullPolicy": {"enum": ["Always", "IfNotPresent", "Never"]}
+      }
+    },
+    "model": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {"name": {"type": "string"}, "version": {"type": "integer", "minimum": 1}}
+    },
+    "server": {
+      "type": "object",
+      "properties": {
+        "replicas": {"type": "integer", "minimum": 1},
+        "logQueueSize": {"type": "integer", "minimum": 100},
+        "lookupTimeoutMs": {"type": "integer", "minimum": 10, "maximum": 5000}
+      }
+    },
+    "seed": {
+      "type": "object",
+      "properties": {
+        "months": {"type": "string", "pattern": "^\\d{4}-\\d{2}:\\d{4}-\\d{2}$"},
+        "historyUntil": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"}
+      }
+    },
+    "simulator": {
+      "type": "object",
+      "properties": {"scenario": {"enum": ["covid", "corruption"]}}
+    }
+  }
+}

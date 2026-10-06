@@ -1,0 +1,65 @@
+# Defaults. Environment differences live in values-dev.yaml / values-prod.yaml only.
+image:
+  repository: driftops
+  tag: ""                 # required: set by the Makefile (dev) or CI (prod, commit SHA)
+  pullPolicy: IfNotPresent
+
+model:
+  name: driftops
+  version: 1              # the pinned serving version (ADR-0013)
+
+securityContext:          # every DriftOps container (OPERATIONS § 5)
+  runAsNonRoot: true
+  runAsUser: 10001
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+  seccompProfile:
+    type: RuntimeDefault
+
+postgres:
+  image: postgres:17-alpine
+  storage: 5Gi
+  storageClass: ""        # "" = the cluster default
+  resources:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {memory: 1Gi}
+
+mlflow:
+  storage: 1Gi
+  storageClass: ""
+  workers: 2
+  resources:
+    requests: {cpu: 100m, memory: 512Mi}
+    limits: {memory: 1Gi}
+
+seed:
+  enabled: true
+  months: "2020-01:2020-06"
+  historyUntil: "2020-03-10"
+  hostPath: ""            # dev: a host folder with parquet/ and bundles/v1/ ; prod: Phase 6 download
+  resources:
+    requests: {cpu: 500m, memory: 1Gi}
+    limits: {memory: 3Gi}
+
+server:
+  replicas: 2             # one pod failing is not an outage
+  logQueueSize: 20000
+  lookupTimeoutMs: 200
+  corsOrigins: ""         # comma-separated
+  resources:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {cpu: "1", memory: 1Gi}
+
+simulator:
+  enabled: true
+  scenario: covid         # scenarios/<name>.yaml in the image
+  resources:
+    requests: {cpu: 200m, memory: 256Mi}
+    limits: {memory: 512Mi}
+
+ingress:
+  enabled: true
+  className: traefik
+  host: ""                # "" = any host (dev)
