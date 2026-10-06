@@ -32,9 +32,12 @@ spec:
           env:
             {{- include "driftops.env" . | nindent 12 }}
 {{- if .Values.observability.enabled }}
+            # optional: a pre-upgrade hook runs BEFORE this release updates the Secret, so a key
+            # added in this release doesn't exist yet. The seed Job (after the Secret) creates the
+            # read-only role then; the migration does it on every later upgrade.
             - name: DRIFTOPS_GRAFANA_DB_PASSWORD
               valueFrom:
-                secretKeyRef: {name: {{ .Release.Name }}-secrets, key: grafana-db-password}
+                secretKeyRef: {name: {{ .Release.Name }}-secrets, key: grafana-db-password, optional: true}
 {{- end }}
           resources:
             requests: {cpu: 50m, memory: 128Mi}
