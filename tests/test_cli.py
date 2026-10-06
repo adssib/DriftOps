@@ -8,7 +8,16 @@ def test_help_lists_every_component():
     out = subprocess.run(
         [sys.executable, "-m", "driftops", "--help"], capture_output=True, text=True, check=True
     ).stdout
-    for cmd in ("serve", "simulate", "seed", "champion", "mlflow"):
+    for cmd in (
+        "serve",
+        "simulate",
+        "seed",
+        "champion",
+        "mlflow",
+        "migrate",
+        "label-feed",
+        "monitor",
+    ):
         assert cmd in out
 
 

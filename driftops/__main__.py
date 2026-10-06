@@ -1,10 +1,14 @@
 """One image, one CLI (ADR-0009): every component is a subcommand.
 
-python -m driftops serve        model server on :8000
-python -m driftops simulate     replay a scenario against the server
-python -m driftops seed         load flights + outcomes, register champion v1
-python -m driftops champion     build champion v1's bundle from 2018
-python -m driftops mlflow       the MLflow tracking + registry server
+Commands:
+    serve        model server on :8000
+    simulate     replay a scenario against the server
+    seed         load flights + outcomes, register champion v1
+    champion     build champion v1's bundle from 2018
+    mlflow       the MLflow tracking + registry server
+    migrate      apply the schema (pre-upgrade hook)
+    label-feed   move outcomes whose time has come
+    monitor X    quality | drift | perf, one catch-up run
 """
 
 from __future__ import annotations
@@ -25,6 +29,8 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("seed", help="load flights + outcomes, register champion v1")
     s.add_argument("--months", default="2020-01:2020-06", help="first:last month, YYYY-MM")
     s.add_argument("--history-until", default="2020-03-10", help="outcomes before this are known")
+
+    sub.add_parser("migrate", help="apply the schema (idempotent)")
 
     sub.add_parser("label-feed", help="move outcomes whose time has come")
 
@@ -51,6 +57,15 @@ def main(argv: list[str] | None = None) -> int:
         from driftops.seed import run
 
         return run(args.months, args.history_until)
+    if args.command == "migrate":
+        from driftops import db, log
+        from driftops.config import Settings
+
+        lg = log.setup("migrate")
+        with db.connect(Settings.from_env().db_url) as conn:
+            db.apply_schema(conn)
+        lg.info("schema_applied")
+        return 0
     if args.command == "label-feed":
         from driftops.feeder import run
 
