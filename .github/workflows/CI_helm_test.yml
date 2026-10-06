@@ -20,6 +20,8 @@ env:
   CHART: deploy/helm/driftops
   KUBECONFORM: v0.8.0
   K8S_VERSION: 1.36.4   # the version k3d and AKS run (deploy/k3d.yaml)
+  # Prometheus Operator CRDs (ServiceMonitor, Probe, PrometheusRule) are not in the core schemas
+  CRDS: https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json
 
 jobs:
   chart:
@@ -39,7 +41,13 @@ jobs:
         run: |
           curl -sSL https://github.com/yannh/kubeconform/releases/download/$KUBECONFORM/kubeconform-linux-amd64.tar.gz | tar xz
           helm template driftops $CHART -f $CHART/values-${{ matrix.env }}.yaml --set image.tag=ci \
-            | ./kubeconform -strict -summary -kubernetes-version $K8S_VERSION
+            | ./kubeconform -strict -summary -kubernetes-version $K8S_VERSION \
+                -schema-location default -schema-location "$CRDS"
+      - name: alert rules are valid PromQL (promtool)
+        run: |
+          helm template driftops $CHART -f $CHART/values-${{ matrix.env }}.yaml --set image.tag=ci -s templates/alerts.yaml \
+            | python3 -c "import sys,yaml; print(yaml.safe_dump(yaml.safe_load(sys.stdin)['spec']))" > rules.yaml
+          docker run --rm -v "$PWD:/w" --user "$(id -u)" --entrypoint promtool prom/prometheus:v3.7.0 check rules /w/rules.yaml
       - name: values schema rejects bad input
         run: |
           ! helm template driftops $CHART -f $CHART/values-${{ matrix.env }}.yaml 2>/dev/null                       # no image tag

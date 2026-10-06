@@ -17,6 +17,9 @@ spec:
   selector: {{- include "driftops.selector" (dict "root" . "component" "postgres") | nindent 4 }}
   ports:
     - {name: postgres, port: 5432, targetPort: 5432}
+    {{- if .Values.observability.enabled }}
+    - {name: metrics, port: 9187, targetPort: metrics}
+    {{- end }}
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -74,6 +77,32 @@ spec:
             - {name: run, mountPath: /var/run/postgresql}
             - {name: tmp, mountPath: /tmp}
             - {name: init, mountPath: /docker-entrypoint-initdb.d, readOnly: true}
+        {{- if .Values.observability.enabled }}
+        # Sidecar: shares the pod's network, reads Postgres' own statistics on localhost and
+        # exposes them to Prometheus, without changing the database container at all.
+        - name: postgres-exporter
+          image: {{ .Values.observability.postgresExporterImage }}
+          env:
+            - {name: DATA_SOURCE_URI, value: "localhost:5432/driftops?sslmode=disable"}
+            - {name: DATA_SOURCE_USER, value: driftops}
+            - name: DATA_SOURCE_PASS
+              valueFrom:
+                secretKeyRef: {name: {{ .Release.Name }}-secrets, key: db-password}
+          ports:
+            - {name: metrics, containerPort: 9187}
+          livenessProbe:
+            httpGet: {path: /, port: metrics}
+            periodSeconds: 30
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {memory: 128Mi}
+          securityContext:
+            runAsUser: 65534
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+        {{- end }}
       volumes:
         - {name: run, emptyDir: {}}
         - {name: tmp, emptyDir: {}}
