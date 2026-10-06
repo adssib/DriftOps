@@ -105,3 +105,8 @@ def _days_to_holiday(dates: pd.Series) -> np.ndarray:
     after = hol[np.clip(idx, 0, len(hol) - 1)]
     dist = np.minimum(np.abs((d - before).astype(int)), np.abs((after - d).astype(int)))
     return np.minimum(dist, 30)
+
+
+def days_to_holiday(dates: pd.Series) -> np.ndarray:
+    """Public form of the calendar feature, for request-time feature building."""
+    return _days_to_holiday(pd.to_datetime(pd.Series(dates)))
