@@ -1,15 +1,52 @@
-# One chart, values per environment (ADR-0017). Upstream charts join here, pinned, in later
-# phases: kube-prometheus-stack, Loki, Alloy (2), Argo Rollouts (4), KEDA (8).
-#   IMAGE_TAG=... helmfile -f deploy/helmfile.yaml.gotmpl -e dev apply
+# One chart, values per environment (ADR-0017); upstream charts pinned. `needs:` installs the
+# monitoring stack (and its CRDs) before the DriftOps chart that uses them.
+#   IMAGE_TAG=... helmfile -f deploy/helmfile.yaml.gotmpl -e dev sync
 environments:
   dev: {}
   prod: {}
 ---
+repositories:
+  - name: prometheus-community
+    url: https://prometheus-community.github.io/helm-charts
+  - name: grafana
+    url: https://grafana.github.io/helm-charts
+
 releases:
+  - name: kube-prometheus-stack
+    namespace: monitoring
+    createNamespace: true
+    chart: prometheus-community/kube-prometheus-stack
+    version: 92.0.0
+    values: [./observability/kube-prometheus-stack.yaml]
+    wait: true
+    timeout: 600
+
+  - name: loki
+    namespace: monitoring
+    chart: grafana/loki
+    version: 7.3.0
+    values: [./observability/loki.yaml]
+    needs: [monitoring/kube-prometheus-stack]
+
+  - name: alloy
+    namespace: monitoring
+    chart: grafana/alloy
+    version: 1.13.0
+    values: [./observability/alloy.yaml]
+    needs: [monitoring/loki]
+
+  - name: prometheus-blackbox-exporter
+    namespace: monitoring
+    chart: prometheus-community/prometheus-blackbox-exporter
+    version: 11.19.1
+    values: [./observability/blackbox.yaml]
+    needs: [monitoring/kube-prometheus-stack]
+
   - name: driftops
     namespace: driftops
     createNamespace: true
     chart: ./helm/driftops
+    needs: [monitoring/kube-prometheus-stack]
     wait: true
     waitForJobs: true
     timeout: 900

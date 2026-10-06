@@ -1,0 +1,74 @@
+# kube-prometheus-stack 92.0.0 — Prometheus, Alertmanager, Grafana, node-exporter,
+# kube-state-metrics. Sized for one k3d/AKS node.
+
+# k3s runs etcd, the scheduler, the controller-manager and kube-proxy inside its one binary and
+# doesn't expose them: scraping them only produces targets that are always down.
+kubeEtcd: {enabled: false}
+kubeControllerManager: {enabled: false}
+kubeScheduler: {enabled: false}
+kubeProxy: {enabled: false}
+defaultRules:
+  rules:
+    etcd: false
+    kubeControllerManager: false
+    kubeSchedulerAlerting: false
+    kubeSchedulerRecording: false
+    kubeProxy: false
+
+prometheus:
+  prometheusSpec:
+    # pick up ServiceMonitors, Probes and rules from every namespace (ours live in driftops)
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    retention: 2d
+    scrapeInterval: 15s
+    resources:
+      requests: {cpu: 200m, memory: 512Mi}
+      limits: {memory: 1536Mi}
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests: {cpu: 20m, memory: 64Mi}
+      limits: {memory: 256Mi}
+
+grafana:
+  defaultDashboardsTimezone: utc
+  grafana.ini:
+    server:
+      root_url: "%(protocol)s://%(domain)s:%(http_port)s/grafana/"
+      serve_from_sub_path: true
+    auth.anonymous:          # dev: anyone on localhost can look, nobody can edit
+      enabled: true
+      org_role: Viewer
+    analytics:
+      check_for_updates: false
+      reporting_enabled: false
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    path: /grafana
+    pathType: Prefix
+    hosts: []
+  sidecar:
+    datasources:
+      searchNamespace: ALL   # our chart ships the Postgres and Loki datasources
+    dashboards:
+      searchNamespace: ALL
+    alerts:
+      enabled: true
+      searchNamespace: ALL   # our chart ships the DataQualityBreach rule
+  resources:
+    requests: {cpu: 50m, memory: 192Mi}
+    limits: {memory: 512Mi}
+
+kube-state-metrics:
+  resources:
+    requests: {cpu: 10m, memory: 64Mi}
+    limits: {memory: 256Mi}
+prometheus-node-exporter:
+  resources:
+    requests: {cpu: 10m, memory: 32Mi}
+    limits: {memory: 128Mi}
