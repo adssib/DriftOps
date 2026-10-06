@@ -177,8 +177,16 @@ ON CONFLICT (id) DO UPDATE SET now = EXCLUDED.now, scenario = EXCLUDED.scenario,
 """
 
 
-async def replay(scenario: Scenario, conn, client, status: Status, log) -> None:
+async def replay(scenario: Scenario, conn, make_client, status: Status, log) -> None:
+    """Replay every day of the scenario.
+
+    A fresh HTTP client (connection pool) per simulated day: a Kubernetes Service balances per
+    TCP connection, not per request, so keep-alive connections opened while only one server pod
+    was ready would pin all traffic to it forever (measured: 822m vs 9m CPU across two pods).
+    Reconnecting every ~10 s spreads load over whichever pods are ready now.
+    """
     sem = asyncio.Semaphore(scenario.concurrency)
+    client = None
 
     async def send(p: dict) -> None:
         async with sem:
@@ -193,6 +201,9 @@ async def replay(scenario: Scenario, conn, client, status: Status, log) -> None:
     status.scenario = scenario.name
     for day, seg in scenario.days():
         status.day, status.segment = day.isoformat(), seg.name
+        if client is not None:
+            await client.aclose()
+        client = make_client()
         rows = await asyncio.to_thread(_fetch_day, conn, day, scenario.sample_pct)
         transform = TRANSFORMS.get(seg.transform) if seg.transform else None
         t0 = time.monotonic()
@@ -220,6 +231,8 @@ async def replay(scenario: Scenario, conn, client, status: Status, log) -> None:
             codes=dict(status.codes),
             seconds=round(time.monotonic() - t0, 2),
         )
+    if client is not None:
+        await client.aclose()
     status.done = True
     log.info("scenario_done", scenario=scenario.name, sent=status.sent, codes=dict(status.codes))
 
@@ -264,11 +277,15 @@ def run(scenario_path: str | None = None) -> int:
         limits = httpx.Limits(
             max_connections=scenario.concurrency, max_keepalive_connections=scenario.concurrency
         )
-        async with httpx.AsyncClient(
-            base_url=s.server_url, headers=headers, timeout=5.0, limits=limits
-        ) as client:
-            await _wait_ready(client, lg)
-            await replay(scenario, conn, client, status, lg)
+
+        def make_client() -> httpx.AsyncClient:
+            return httpx.AsyncClient(
+                base_url=s.server_url, headers=headers, timeout=5.0, limits=limits
+            )
+
+        async with make_client() as probe:
+            await _wait_ready(probe, lg)
+        await replay(scenario, conn, make_client, status, lg)
 
     @asynccontextmanager
     async def lifespan(app):
