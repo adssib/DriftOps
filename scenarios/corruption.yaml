@@ -1,0 +1,16 @@
+# Same world, broken pipeline: two weeks of distances sent in kilometres.
+# The data-quality guard must block the retrain the drift alarm asks for.
+name: corruption
+seconds_per_day: 10
+sample_pct: 5
+segments:
+  - name: normal
+    start: 2020-01-20
+    end: 2020-02-02
+  - name: distance-km
+    start: 2020-02-03
+    end: 2020-02-16
+    transform: distance_km
+  - name: recovered
+    start: 2020-02-17
+    end: 2020-02-29
