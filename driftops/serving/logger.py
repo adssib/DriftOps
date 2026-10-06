@@ -9,6 +9,7 @@ a log line is a monitoring problem, failing a prediction is an outage.
 from __future__ import annotations
 
 import json
+import math
 import queue
 import threading
 import time
@@ -18,6 +19,7 @@ COLUMNS = [
     "request_id",
     "flight_id",
     "source",
+    "run_id",
     "event_time",
     "model_version",
     "features",
@@ -118,9 +120,10 @@ def postgres_sink(pool) -> Sink:
                         r["request_id"],
                         r.get("flight_id"),
                         r["source"],
+                        r.get("run_id"),
                         r["event_time"],
                         r["model_version"],
-                        json.dumps(r["features"], default=_json_default),
+                        features_json(r["features"]),
                         r["score"],
                         r.get("latency_ms"),
                     )
@@ -129,8 +132,20 @@ def postgres_sink(pool) -> Sink:
     return sink
 
 
+def features_json(features: dict) -> str:
+    """JSON for the jsonb column. Missing features (NaN) become null: json.dumps would write
+    NaN, which Postgres rejects, and the whole batch (exactly the degraded rows the quality
+    monitor needs to see) would be dropped."""
+    clean = {
+        k: (None if isinstance(v, float) and math.isnan(v) else v) for k, v in features.items()
+    }
+    return json.dumps(clean, default=_json_default, allow_nan=False)
+
+
 def _json_default(x):
+    """numpy scalars and the like: numbers stay numbers (NaN → null), anything else a string."""
     try:
-        return float(x)
+        f = float(x)
     except (TypeError, ValueError):
         return str(x)
+    return None if math.isnan(f) else f
