@@ -41,7 +41,7 @@ jobs:
           docker run --rm driftops:ci --help
           test "$(docker run --rm --entrypoint id driftops:ci -u)" = "10001"
       - name: Trivy (fail on fixable critical CVEs)
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: driftops:ci
           severity: CRITICAL
