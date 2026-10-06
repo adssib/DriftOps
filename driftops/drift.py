@@ -138,3 +138,47 @@ def _cat_props(s: pd.Series, keep: list[str]) -> pd.Series:
     v = s.astype("string").where(s.isin(keep), RARE)
     p = v.value_counts(normalize=True)
     return p.reindex(keep + [RARE], fill_value=0.0)
+
+
+def reference_to_dict(ref: Reference) -> dict:
+    """JSON-safe form of a Reference, so it can travel with the model in its bundle."""
+    return {
+        "numeric_edges": {k: _floats(v) for k, v in ref.numeric_edges.items()},
+        "numeric_props": {k: v.tolist() for k, v in ref.numeric_props.items()},
+        "numeric_range": {k: list(v) for k, v in ref.numeric_range.items()},
+        "categorical_props": {
+            k: {"index": v.index.tolist(), "values": v.tolist()}
+            for k, v in ref.categorical_props.items()
+        },
+        "vocab": {k: sorted(v) for k, v in ref.vocab.items()},
+        "route_distance": [[o, d, float(km)] for (o, d), km in ref.route_distance.items()],
+        "score_edges": _floats(ref.score_edges),
+        "score_props": ref.score_props.tolist(),
+        "null_rate": dict(ref.null_rate),
+    }
+
+
+def reference_from_dict(d: dict) -> Reference:
+    return Reference(
+        numeric_edges={k: _unfloats(v) for k, v in d["numeric_edges"].items()},
+        numeric_props={k: np.asarray(v, dtype=float) for k, v in d["numeric_props"].items()},
+        numeric_range={k: tuple(v) for k, v in d["numeric_range"].items()},
+        categorical_props={
+            k: pd.Series(v["values"], index=v["index"], dtype=float)
+            for k, v in d["categorical_props"].items()
+        },
+        vocab={k: set(v) for k, v in d["vocab"].items()},
+        route_distance={(o, de): km for o, de, km in d["route_distance"]},
+        score_edges=_unfloats(d["score_edges"]),
+        score_props=np.asarray(d["score_props"], dtype=float),
+        null_rate=dict(d["null_rate"]),
+    )
+
+
+def _floats(a: np.ndarray) -> list:
+    """JSON has no infinity: the outer bin edges are stored as strings."""
+    return [("inf" if x > 0 else "-inf") if np.isinf(x) else float(x) for x in a]
+
+
+def _unfloats(a: list) -> np.ndarray:
+    return np.asarray([float(x) for x in a], dtype=float)
