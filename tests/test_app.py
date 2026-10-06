@@ -146,3 +146,25 @@ def test_metrics_by_model_version(make_client):
     text = client.get("/metrics").text
     assert 'driftops_requests_total{endpoint="predict",model_version="1",status="200"}' in text
     assert 'driftops_model_info{version="1"} 1.0' in text
+
+
+def test_explanations_only_on_request(make_client):
+    client, _ = make_client()
+    assert ready(client)
+    assert len(client.post("/predict", json=GOOD).json()["top_reasons"]) == 3
+    assert client.post("/predict?explain=false", json=GOOD).json()["top_reasons"] == []
+
+
+def test_healthz_answers_while_predictions_run(make_client):
+    """Scoring runs in the thread pool: the event loop stays free for the liveness probe."""
+    import concurrent.futures as cf
+
+    client, _ = make_client()
+    assert ready(client)
+    with cf.ThreadPoolExecutor(16) as pool:
+        futures = [pool.submit(client.post, "/predict", json=GOOD) for _ in range(64)]
+        t0 = time.perf_counter()
+        assert client.get("/healthz").status_code == 200
+        health_s = time.perf_counter() - t0
+        assert all(f.result().status_code == 200 for f in futures)
+    assert health_s < 1.0

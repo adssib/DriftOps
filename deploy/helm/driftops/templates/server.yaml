@@ -49,6 +49,8 @@ spec:
             - {name: DRIFTOPS_LOG_QUEUE_SIZE, value: {{ .Values.server.logQueueSize | quote }}}
             - {name: DRIFTOPS_LOOKUP_TIMEOUT_MS, value: {{ .Values.server.lookupTimeoutMs | quote }}}
             - {name: DRIFTOPS_CORS_ORIGINS, value: {{ .Values.server.corsOrigins | quote }}}
+            # LightGBM's OpenMP pool otherwise sizes itself to the node, not the pod's CPU limit
+            - {name: OMP_NUM_THREADS, value: "1"}
             - name: DRIFTOPS_SIM_TOKEN
               valueFrom:
                 secretKeyRef: {name: {{ .Release.Name }}-secrets, key: sim-token}
@@ -62,10 +64,12 @@ spec:
           livenessProbe:
             httpGet: {path: /healthz, port: http}
             periodSeconds: 10
+            timeoutSeconds: 3
             failureThreshold: 3
           readinessProbe:
             httpGet: {path: /readyz, port: http}
             periodSeconds: 3
+            timeoutSeconds: 2
             failureThreshold: 2
           resources: {{- toYaml .Values.server.resources | nindent 12 }}
           securityContext: {{- toYaml .Values.securityContext | nindent 12 }}

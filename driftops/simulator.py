@@ -183,7 +183,7 @@ async def replay(scenario: Scenario, conn, client, status: Status, log) -> None:
     async def send(p: dict) -> None:
         async with sem:
             try:
-                r = await client.post("/predict", json=p)
+                r = await client.post("/predict", params={"explain": "false"}, json=p)
                 status.codes[r.status_code] += 1
             except Exception as e:  # noqa: BLE001 - server restarting, network blip: count, move on
                 status.errors += 1

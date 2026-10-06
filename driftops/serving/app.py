@@ -22,6 +22,7 @@ import numpy as np
 import pandas as pd
 import structlog
 from fastapi import FastAPI, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from prometheus_client import (
@@ -224,17 +225,13 @@ def create_app(
         except ValueError as e:
             return done(422, {"detail": str(e), "request_id": rid})
 
-        row, warnings = build_row(
-            req, None if source == "sim" and req.distance is not None else lookup, model.vocab
+        # Lookups (sync DB calls) and scoring (CPU) run in the thread pool, never on the event
+        # loop: a blocked loop can't answer /healthz, and the liveness probe would restart a
+        # perfectly healthy pod under load.
+        explain = request.query_params.get("explain", "true").lower() != "false"
+        row, warnings, p, reasons = await run_in_threadpool(
+            score, model, lookup, req, source, explain
         )
-        X = F.to_model_frame(pd.DataFrame([row]), model.vocab)
-        p = float(model.booster.predict(X)[0])
-        contrib = model.booster.predict(X, pred_contrib=True)[0][:-1]  # last column is the bias
-        order = np.argsort(-np.abs(contrib))[:TOP_REASONS]
-        reasons = [
-            (f"{F.FEATURES[i]}={_fmt(row[F.FEATURES[i]])}", round(float(contrib[i]), 4))
-            for i in order
-        ]
         for w in warnings:
             m.warnings.labels(w.split(":")[0]).inc()
 
@@ -264,6 +261,31 @@ def create_app(
         )
 
     return app
+
+
+def score(
+    model: Model, lookup: ScheduleLookup | None, req: PredictRequest, source: str, explain: bool
+):
+    """Features → probability (+ SHAP reasons on request). Runs off the event loop.
+
+    LightGBM is told to use one thread: its default OpenMP pool is sized to the node's cores,
+    which for one row is pure overhead (3.2 ms vs 14.8 ms measured) and, inside a CPU-limited
+    pod, causes throttling. SHAP costs ~4.5x the prediction, so machine callers skip it.
+    """
+    row, warnings = build_row(
+        req, None if source == "sim" and req.distance is not None else lookup, model.vocab
+    )
+    X = F.to_model_frame(pd.DataFrame([row]), model.vocab)
+    p = float(model.booster.predict(X, num_threads=1)[0])
+    reasons: list[tuple[str, float]] = []
+    if explain:
+        contrib = model.booster.predict(X, pred_contrib=True, num_threads=1)[0][:-1]  # drop bias
+        order = np.argsort(-np.abs(contrib))[:TOP_REASONS]
+        reasons = [
+            (f"{F.FEATURES[i]}={_fmt(row[F.FEATURES[i]])}", round(float(contrib[i]), 4))
+            for i in order
+        ]
+    return row, warnings, p, reasons
 
 
 def _fmt(v) -> str:
