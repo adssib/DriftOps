@@ -45,5 +45,6 @@ in [STACK.md](STACK.md); how it's run is in [OPERATIONS.md](OPERATIONS.md).
 
 ## Current status
 
-**Research done. Phase 1 is next**; its implementation plan is in
-[`docs/plans/`](plans/).
+**Research done. Phase 1 in progress** ([plan](plans/2026-10-06-phase-1-serving-on-k3d.md)):
+code, chart and CI are written and unit-tested (68 tests); bring-up on k3d and the measurements
+are next.

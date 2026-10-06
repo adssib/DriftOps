@@ -98,11 +98,15 @@ decision and one retrain step by step)
 
 ## Run it
 
+Needs Docker, [k3d](https://k3d.io), Helm, [helmfile](https://helmfile.readthedocs.io) and `uv`.
+
 ```bash
-uv sync
-uv run python -m driftops.data 2018-01 2020-06        # BTS → data/parquet (162 MB)
-uv run pytest                                          # unit tests
+make data        # BTS 2018-01 → 2020-06 into data/parquet (~160 MB)
+make up          # champion v1 bundle → k3d cluster → image → Helm install → helm test + one curl
+make status      # pods, jobs, simulator progress
+make down        # delete the cluster
 ```
 
-Research reproduction commands are in each research doc. The cluster (`make up`) arrives with
-Phase 1.
+`make up` serves the model at `localhost:8080/predict` while the simulator replays the COVID
+scenario through it (`SCENARIO=corruption make up` for the other one). Unit tests: `make test`;
+lint and manifest checks: `make lint`. Research reproduction commands are in each research doc.
