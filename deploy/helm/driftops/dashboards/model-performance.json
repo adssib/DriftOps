@@ -1,0 +1,424 @@
+{
+ "uid": "driftops-performance",
+ "title": "DriftOps \u00b7 Model performance",
+ "description": "Data scientist view: is the model still right?",
+ "tags": [
+  "driftops",
+  "ml"
+ ],
+ "timezone": "utc",
+ "editable": false,
+ "schemaVersion": 39,
+ "time": {
+  "from": "2020-03-01T00:00:00.000Z",
+  "to": "2020-06-01T00:00:00.000Z"
+ },
+ "refresh": "",
+ "templating": {
+  "list": [
+   {
+    "name": "run",
+    "label": "Run",
+    "type": "query",
+    "datasource": {
+     "type": "grafana-postgresql-datasource",
+     "uid": "driftops-postgres"
+    },
+    "query": "SELECT run_id AS __value, 'run ' || run_id || ' \u00b7 ' || scenario AS __text FROM runs ORDER BY run_id DESC",
+    "refresh": 1,
+    "sort": 0,
+    "current": {}
+   }
+  ]
+ },
+ "annotations": {
+  "list": [
+   {
+    "builtIn": 1,
+    "datasource": {
+     "type": "grafana",
+     "uid": "-- Grafana --"
+    },
+    "enable": true,
+    "hide": true,
+    "name": "Annotations & Alerts",
+    "type": "dashboard"
+   },
+   {
+    "name": "Loop decisions",
+    "datasource": {
+     "type": "grafana-postgresql-datasource",
+     "uid": "driftops-postgres"
+    },
+    "enable": true,
+    "iconColor": "purple",
+    "target": {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "table",
+     "rawSql": "SELECT sim_time AS time, kind || coalesce(' v' || model_version, '') AS text, kind AS tags FROM loop_events WHERE run_id = $run AND $__timeFilter(sim_time) ORDER BY 1"
+    }
+   }
+  ]
+ },
+ "panels": [
+  {
+   "type": "text",
+   "title": "",
+   "options": {
+    "mode": "markdown",
+    "content": "**Label drift**: what outcomes say about the model, over the 7 simulated days before each day, with only the outcomes known by then. Alarm when |calibration gap| > **0.158** or Brier > **0.326**. This is the signal that caught COVID two weeks before feature drift did."
+   },
+   "transparent": true,
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 2
+   },
+   "id": 1
+  },
+  {
+   "type": "timeseries",
+   "title": "Observed vs predicted disruption rate",
+   "description": "When these separate, the model's world has changed.",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "time_series",
+     "rawSql": "SELECT window_end AS time, (metrics->>'observed_rate')::float AS \"observed\" FROM monitor_results WHERE run_id = $run AND monitor = 'perf' AND $__timeFilter(window_end) ORDER BY 1"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "time_series",
+     "rawSql": "SELECT window_end AS time, (metrics->>'predicted_rate')::float AS \"predicted\" FROM monitor_results WHERE run_id = $run AND monitor = 'perf' AND $__timeFilter(window_end) ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "showPoints": "never",
+      "spanNulls": true
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 2,
+    "w": 12,
+    "h": 8
+   },
+   "id": 2
+  },
+  {
+   "type": "timeseries",
+   "title": "Calibration gap",
+   "description": "Observed minus predicted. Alarm beyond \u00b1threshold.",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "time_series",
+     "rawSql": "SELECT window_end AS time, (metrics->>'calibration_gap')::float AS \"calibration gap\" FROM monitor_results WHERE run_id = $run AND monitor = 'perf' AND $__timeFilter(window_end) ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "showPoints": "never",
+      "spanNulls": true,
+      "thresholdsStyle": {
+       "mode": "dashed"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": -0.158
+       },
+       {
+        "color": "red",
+        "value": 0.158
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 2,
+    "w": 12,
+    "h": 8
+   },
+   "id": 3
+  },
+  {
+   "type": "timeseries",
+   "title": "Brier score",
+   "description": "Lower is better.",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "time_series",
+     "rawSql": "SELECT window_end AS time, (metrics->>'brier')::float AS \"Brier\" FROM monitor_results WHERE run_id = $run AND monitor = 'perf' AND $__timeFilter(window_end) ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "showPoints": "never",
+      "spanNulls": true,
+      "thresholdsStyle": {
+       "mode": "dashed"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 0.326
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 10,
+    "w": 8,
+    "h": 8
+   },
+   "id": 4
+  },
+  {
+   "type": "timeseries",
+   "title": "AUC",
+   "description": "Ranking quality; can't see calibration failures.",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "time_series",
+     "rawSql": "SELECT window_end AS time, (metrics->>'auc')::float AS \"AUC\" FROM monitor_results WHERE run_id = $run AND monitor = 'perf' AND $__timeFilter(window_end) ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "showPoints": "never",
+      "spanNulls": true
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 10,
+    "w": 8,
+    "h": 8
+   },
+   "id": 5
+  },
+  {
+   "type": "table",
+   "title": "Label lag",
+   "description": "How far behind the simulated clock the outcomes are.",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "table",
+     "rawSql": "SELECT (SELECT now FROM sim_clock) AS \"simulated now\", (SELECT value FROM watermarks WHERE name = 'label-feed') AS \"labels delivered up to\""
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 10,
+    "w": 8,
+    "h": 8
+   },
+   "id": 6
+  },
+  {
+   "type": "table",
+   "title": "Per-carrier slices, latest window",
+   "description": "The ten busiest carriers. A slice can fail while the average looks fine.",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "table",
+     "rawSql": "SELECT s.key AS carrier, (s.value->>'rows')::int AS flights, round((s.value->>'brier')::numeric, 4) AS brier, round((s.value->>'calibration_gap')::numeric, 4) AS calibration_gap FROM monitor_results, jsonb_each(metrics->'slices') AS s WHERE run_id = $run AND monitor = 'perf' AND window_end = (SELECT max(window_end) FROM monitor_results WHERE run_id = $run AND monitor = 'perf') ORDER BY flights DESC"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 18,
+    "w": 24,
+    "h": 8
+   },
+   "id": 7
+  }
+ ]
+}

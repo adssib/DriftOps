@@ -1,0 +1,423 @@
+{
+ "uid": "driftops-quality",
+ "title": "DriftOps \u00b7 Data quality",
+ "description": "Data engineer view: is the data broken?",
+ "tags": [
+  "driftops",
+  "ml"
+ ],
+ "timezone": "utc",
+ "editable": false,
+ "schemaVersion": 39,
+ "time": {
+  "from": "2020-03-01T00:00:00.000Z",
+  "to": "2020-06-01T00:00:00.000Z"
+ },
+ "refresh": "",
+ "templating": {
+  "list": [
+   {
+    "name": "run",
+    "label": "Run",
+    "type": "query",
+    "datasource": {
+     "type": "grafana-postgresql-datasource",
+     "uid": "driftops-postgres"
+    },
+    "query": "SELECT run_id AS __value, 'run ' || run_id || ' \u00b7 ' || scenario AS __text FROM runs ORDER BY run_id DESC",
+    "refresh": 1,
+    "sort": 0,
+    "current": {}
+   }
+  ]
+ },
+ "annotations": {
+  "list": [
+   {
+    "builtIn": 1,
+    "datasource": {
+     "type": "grafana",
+     "uid": "-- Grafana --"
+    },
+    "enable": true,
+    "hide": true,
+    "name": "Annotations & Alerts",
+    "type": "dashboard"
+   },
+   {
+    "name": "Loop decisions",
+    "datasource": {
+     "type": "grafana-postgresql-datasource",
+     "uid": "driftops-postgres"
+    },
+    "enable": true,
+    "iconColor": "purple",
+    "target": {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "table",
+     "rawSql": "SELECT sim_time AS time, kind || coalesce(' v' || model_version, '') AS text, kind AS tags FROM loop_events WHERE run_id = $run AND $__timeFilter(sim_time) ORDER BY 1"
+    }
+   }
+  ]
+ },
+ "panels": [
+  {
+   "type": "text",
+   "title": "",
+   "options": {
+    "mode": "markdown",
+    "content": "**Data quality**: things that mean *the pipeline broke*, not *the world changed*. Any breach **blocks retraining** and pages a human (ADR-0005). Simulated time."
+   },
+   "transparent": true,
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 2
+   },
+   "id": 1
+  },
+  {
+   "type": "timeseries",
+   "title": "null increase",
+   "description": "Worst rise in a column's null rate vs. training. The 'lookup times out' corruption.",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "time_series",
+     "rawSql": "SELECT window_end AS time, (metrics->>'null_increase')::float AS \"null_increase\" FROM monitor_results WHERE run_id = $run AND monitor = 'quality' AND $__timeFilter(window_end) ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "showPoints": "never",
+      "spanNulls": true,
+      "thresholdsStyle": {
+       "mode": "dashed"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 0.05
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 2,
+    "w": 6,
+    "h": 8
+   },
+   "id": 2
+  },
+  {
+   "type": "timeseries",
+   "title": "out of range",
+   "description": "Share of numeric values outside the training 0.05\u201399.95% range.",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "time_series",
+     "rawSql": "SELECT window_end AS time, (metrics->>'out_of_range')::float AS \"out_of_range\" FROM monitor_results WHERE run_id = $run AND monitor = 'quality' AND $__timeFilter(window_end) ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "showPoints": "never",
+      "spanNulls": true,
+      "thresholdsStyle": {
+       "mode": "dashed"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 0.02
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   },
+   "gridPos": {
+    "x": 6,
+    "y": 2,
+    "w": 6,
+    "h": 8
+   },
+   "id": 3
+  },
+  {
+   "type": "timeseries",
+   "title": "unseen category",
+   "description": "Rows with a carrier or airport the model never saw. The 'renamed code' corruption.",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "time_series",
+     "rawSql": "SELECT window_end AS time, (metrics->>'unseen_category')::float AS \"unseen_category\" FROM monitor_results WHERE run_id = $run AND monitor = 'quality' AND $__timeFilter(window_end) ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "showPoints": "never",
+      "spanNulls": true,
+      "thresholdsStyle": {
+       "mode": "dashed"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 0.02
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 2,
+    "w": 6,
+    "h": 8
+   },
+   "id": 4
+  },
+  {
+   "type": "timeseries",
+   "title": "route distance mismatch",
+   "description": "Distance disagrees with the known route by > 2%. The miles\u2192km bug.",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "time_series",
+     "rawSql": "SELECT window_end AS time, (metrics->>'route_distance_mismatch')::float AS \"route_distance_mismatch\" FROM monitor_results WHERE run_id = $run AND monitor = 'quality' AND $__timeFilter(window_end) ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "showPoints": "never",
+      "spanNulls": true,
+      "thresholdsStyle": {
+       "mode": "dashed"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 0.02
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   },
+   "gridPos": {
+    "x": 18,
+    "y": 2,
+    "w": 6,
+    "h": 8
+   },
+   "id": 5
+  },
+  {
+   "type": "state-timeline",
+   "title": "Quality breach",
+   "description": "Red = retraining is blocked for this window.",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "time_series",
+     "rawSql": "SELECT window_end AS time, alarm::int AS \"quality\" FROM monitor_results WHERE run_id = $run AND monitor = 'quality' AND $__timeFilter(window_end) ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "ok",
+         "color": "green",
+         "index": 0
+        },
+        "1": {
+         "text": "ALARM",
+         "color": "red",
+         "index": 1
+        }
+       }
+      }
+     ],
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 10,
+    "w": 24,
+    "h": 5
+   },
+   "id": 6
+  }
+ ]
+}
