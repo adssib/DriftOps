@@ -7,3 +7,4 @@ vendor/
 mlruns/
 *.egg-info/
 reports/**/champion_*.txt
+.image-tag

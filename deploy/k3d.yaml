@@ -1,0 +1,21 @@
+# Local cluster (ADR-0015). The data folder is mounted by the Makefile (k3d needs an absolute
+# host path): `--volume $(CURDIR)/data:/data@server:0`.
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: driftops
+# Pinned to the Kubernetes version AKS runs (dev/prod parity). k3d's own default (v1.35.5-k3s1 in
+# k3d 5.9.0) crash-loops: its embedded cloud-controller-manager races its RBAC bootstrap.
+image: rancher/k3s:v1.36.4-k3s1
+servers: 1
+agents: 0
+ports:
+  - port: 8080:80          # Traefik ingress → http://localhost:8080
+    nodeFilters: [loadbalancer]
+options:
+  k3d:
+    wait: true
+    timeout: "120s"
+  kubeconfig:
+    updateDefaultKubeconfig: true
+    switchCurrentContext: true
