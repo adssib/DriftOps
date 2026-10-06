@@ -136,6 +136,7 @@ def run(months: str, history_until: str, settings: Settings | None = None) -> in
     cutoff = pd.Timestamp(history_until)
     with db.connect(s.db_url) as conn:
         db.apply_schema(conn)
+        db.ensure_roles_from_env(conn)
         conn.autocommit = True
         total = sum(seed_month(conn, p, cutoff, lg) for p in paths)
         conn.execute(

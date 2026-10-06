@@ -64,7 +64,8 @@ def main(argv: list[str] | None = None) -> int:
         lg = log.setup("migrate")
         with db.connect(Settings.from_env().db_url) as conn:
             db.apply_schema(conn)
-        lg.info("schema_applied")
+            readonly = db.ensure_roles_from_env(conn)
+        lg.info("schema_applied", readonly_role=readonly)
         return 0
     if args.command == "label-feed":
         from driftops.feeder import run

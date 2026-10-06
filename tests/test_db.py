@@ -81,3 +81,19 @@ def test_sink_writes_run_id_and_nan_as_null(db_url):
         ).fetchone()
     pool.close()
     assert row == (7, "sim", None, "AA")
+
+
+def test_readonly_role_can_read_but_not_write(db_url):
+    import psycopg
+    import pytest
+
+    with db.connect(db_url) as conn:
+        db.apply_schema(conn)
+        db.ensure_readonly_role(conn, "pw-1")
+        db.ensure_readonly_role(conn, "pw-2")  # idempotent; password follows the Secret
+    ro = db_url.replace("driftops:driftops@", "grafana_ro:pw-2@")
+    with psycopg.connect(ro) as conn:
+        assert conn.execute("SELECT count(*) FROM monitor_results").fetchone()[0] == 0
+        assert conn.execute("SHOW statement_timeout").fetchone()[0] == "10s"
+        with pytest.raises(psycopg.errors.InsufficientPrivilege):
+            conn.execute("DELETE FROM predictions")

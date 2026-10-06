@@ -28,6 +28,11 @@ spec:
           env:
             {{- include "driftops.env" . | nindent 12 }}
             - {name: DRIFTOPS_SEED_DIR, value: /data}
+{{- if .Values.observability.enabled }}
+            - name: DRIFTOPS_GRAFANA_DB_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: {{ .Release.Name }}-secrets, key: grafana-db-password}
+{{- end }}
           resources: {{- toYaml .Values.seed.resources | nindent 12 }}
           securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
           volumeMounts:

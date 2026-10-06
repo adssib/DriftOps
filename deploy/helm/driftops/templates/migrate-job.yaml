@@ -29,7 +29,13 @@ spec:
           image: {{ include "driftops.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args: ["migrate"]
-          env: {{- include "driftops.env" . | nindent 12 }}
+          env:
+            {{- include "driftops.env" . | nindent 12 }}
+{{- if .Values.observability.enabled }}
+            - name: DRIFTOPS_GRAFANA_DB_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: {{ .Release.Name }}-secrets, key: grafana-db-password}
+{{- end }}
           resources:
             requests: {cpu: 50m, memory: 128Mi}
             limits: {memory: 512Mi}
