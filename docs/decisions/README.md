@@ -25,3 +25,4 @@ Template: [0000](0000-adr-template.md).
 | [0017](0017-one-chart-values-per-environment.md) | One Helm chart, one values file per environment, helmfile for upstream charts | 1 |
 | [0018](0018-loki-and-alloy-no-tracing-yet.md) | Logs in Loki via Alloy; no tracing yet | 2 |
 | [0019](0019-identity-decides-source.md) | The caller's identity decides `source`, never the request body | 1 |
+| [0020](0020-score-single-threaded-explain-on-request.md) | Score single-threaded; explain only on request | 1 |

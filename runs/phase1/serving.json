@@ -1,0 +1,30 @@
+{
+  "window_s": 304,
+  "server_pods": 2,
+  "requests_per_s": 88.0,
+  "ok_ratio": 1.0,
+  "latency_mean_ms": 28.87,
+  "latency_p50": "<= 25 ms",
+  "latency_p95": "<= 100 ms",
+  "latency_p99": "<= 250 ms",
+  "logged": 26754,
+  "dropped": 0,
+  "rows_written": 26688,
+  "sim_clock": {
+    "from": "2020-03-14 15:05:00",
+    "to": "2020-04-13 14:04:00"
+  },
+  "restarts_during_window": {},
+  "simulator": {
+    "scenario": "covid",
+    "day": "2020-04-13",
+    "segment": "covid-shock",
+    "sent": 31594,
+    "status_codes": {
+      "200": 31570
+    },
+    "transport_errors": 23,
+    "done": false,
+    "uptime_s": 354
+  }
+}

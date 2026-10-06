@@ -31,8 +31,8 @@ mlflow:
   storageClass: ""
   workers: 2
   resources:
-    requests: {cpu: 100m, memory: 768Mi}
-    limits: {memory: 2Gi}       # OOMKilled at 1Gi on start-up (MLflow 3 imports a lot)
+    requests: {cpu: 100m, memory: 2Gi}
+    limits: {memory: 3Gi}       # measured 1,778Mi steady (OOMKilled at 1Gi on start-up)
 
 seed:
   enabled: true

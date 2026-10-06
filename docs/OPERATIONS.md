@@ -163,6 +163,33 @@ cost per h   = nodes × node $/h
 The only input that must be measured is **per-pod req/s at the SLO**. Everything else is
 arithmetic, so the table below re-computes itself from Phase 8's number.
 
+### Measured so far (Phase 1, k3d on a laptop)
+
+Per request, champion v1 (400 trees), one thread (`runs/phase1/`, `scripts/measure_serving.py`):
+
+| Step | Time |
+|---|---|
+| build the feature frame | 4.6 ms |
+| LightGBM predict, **default OpenMP pool** | 14.8 ms |
+| LightGBM predict, **1 thread** | 3.2 ms |
+| SHAP explanation, 1 thread | 14.5 ms |
+
+So the server scores single-threaded and explains only on request (ADR-0020): ~8 ms of CPU per
+machine request, ~22 ms per explained one.
+
+Five minutes of the COVID scenario, 2 server pods (1 CPU each):
+
+| Run | req/s | 200s | p50 | p95 | p99 | logged / dropped |
+|---|---|---|---|---|---|---|
+| `serving-unbalanced.json` | 80 | 100% | ≤ 50 ms | **≤ 250 ms** | ≤ 500 ms | 24,325 / 0 |
+| `serving.json` (reconnect per simulated day) | 88 | 100% | ≤ 25 ms | **≤ 100 ms** | ≤ 250 ms | 26,754 / 0 |
+
+The first run missed the p95 SLO because one pod took all the traffic (822m CPU, throttled in 35%
+of periods) while the other idled: a Service balances **per connection**, and the simulator's
+keep-alive connections were opened while only one pod was ready. Reconnecting every simulated day
+brought the split to 32/68 over the window. **Even split needs per-request balancing**: client-side
+round-robin over a headless Service (what gRPC clients do), or an L7 proxy. That is Phase 8.
+
 ### Worked example: ⚠️ estimates, to be replaced by measurements
 
 Assumptions: a server pod = 1 vCPU / 1 GiB serving **~250 req/s at p95 < 100 ms** (to be
