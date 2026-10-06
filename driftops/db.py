@@ -57,3 +57,21 @@ def copy_frame(conn: psycopg.Connection, table: str, df) -> int:
         for start in range(0, len(df), step):
             cp.write(df.iloc[start : start + step].to_csv(index=False, header=False))
     return len(df)
+
+
+def get_watermark(conn: psycopg.Connection, name: str):
+    row = conn.execute("SELECT value FROM watermarks WHERE name = %s", (name,)).fetchone()
+    return row[0] if row else None
+
+
+def set_watermark(conn: psycopg.Connection, name: str, value) -> None:
+    conn.execute(
+        """INSERT INTO watermarks (name, value, updated_at) VALUES (%s, %s, now())
+           ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value, updated_at = now()""",
+        (name, value),
+    )
+
+
+def sim_clock(conn: psycopg.Connection):
+    """(now, run_id, scenario) of the simulated clock, or None before anything has run."""
+    return conn.execute("SELECT now, run_id, scenario FROM sim_clock WHERE id = 1").fetchone()

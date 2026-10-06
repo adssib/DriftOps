@@ -26,6 +26,11 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--months", default="2020-01:2020-06", help="first:last month, YYYY-MM")
     s.add_argument("--history-until", default="2020-03-10", help="outcomes before this are known")
 
+    sub.add_parser("label-feed", help="move outcomes whose time has come")
+
+    s = sub.add_parser("monitor", help="one monitor's catch-up run")
+    s.add_argument("name", choices=["quality", "drift", "perf"])
+
     s = sub.add_parser("champion", help="build champion v1's bundle from 2018")
     s.add_argument("--out", default="data/bundles/v1")
 
@@ -46,6 +51,14 @@ def main(argv: list[str] | None = None) -> int:
         from driftops.seed import run
 
         return run(args.months, args.history_until)
+    if args.command == "label-feed":
+        from driftops.feeder import run
+
+        return run()
+    if args.command == "monitor":
+        from driftops.monitors import run
+
+        return run(args.name)
     if args.command == "champion":
         from driftops.champion import run
 
