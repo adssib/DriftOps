@@ -175,7 +175,14 @@ def seed_history_traffic(conn, bundle_dir: Path, cutoff: pd.Timestamp, sample_pc
     Stored with run_id NULL: part of every run, so the monitors' first windows on the scenario's
     first day are full, as they were in the backtest (ADR-0014). Skipped if already present.
     """
-    if conn.execute("SELECT EXISTS (SELECT 1 FROM predictions WHERE run_id IS NULL)").fetchone()[0]:
+    # Look in the history range itself: other run_id-NULL rows (traffic logged before runs
+    # existed) must not count as history.
+    present = conn.execute(
+        "SELECT EXISTS (SELECT 1 FROM predictions WHERE run_id IS NULL AND source = 'sim'"
+        " AND event_time < %s AND model_version = 1)",
+        (cutoff.to_pydatetime(),),
+    ).fetchone()[0]
+    if present:
         lg.info("history_traffic_skipped", reason="already present")
         return 0
     with conn.cursor() as cur:

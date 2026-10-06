@@ -86,13 +86,18 @@ def test_history_traffic_once(db_url, tmp_path):
         conn.autocommit = True
         seed.seed_month(conn, path, pd.Timestamp("2020-03-02"), lg)
         cutoff = pd.Timestamp("2020-03-03")
+        # traffic logged before runs existed: run_id NULL but after the cutoff, not history
+        conn.execute(
+            "INSERT INTO predictions (request_id, source, event_time, model_version, features, score)"
+            " VALUES (gen_random_uuid(), 'sim', '2020-03-10 08:00', 1, '{}', 0.2)"
+        )
         first = seed.seed_history_traffic(conn, tmp_path / "v1", cutoff, 100, lg)
         second = seed.seed_history_traffic(conn, tmp_path / "v1", cutoff, 100, lg)
         rows = conn.execute(
             "SELECT count(*), count(*) FILTER (WHERE run_id IS NULL AND source = 'sim') FROM predictions"
         ).fetchone()
     assert (first, second) == (3, 0)
-    assert rows == (3, 3)
+    assert rows == (4, 4)
 
 
 def _tiny():
