@@ -4,9 +4,9 @@ name: CI_docker_build
 
 on:
   pull_request:
-    paths: ["driftops/**", "scenarios/**", "Dockerfile", ".dockerignore", "pyproject.toml", "uv.lock", ".github/workflows/CI_docker_build.yml"]
+    paths: ["driftops/**", "scenarios/**", "scripts/source_digest.sh", "Dockerfile", ".dockerignore", "pyproject.toml", "uv.lock", ".github/workflows/CI_docker_build.yml"]
   push:
-    paths: ["driftops/**", "scenarios/**", "Dockerfile", ".dockerignore", "pyproject.toml", "uv.lock", ".github/workflows/CI_docker_build.yml"]
+    paths: ["driftops/**", "scenarios/**", "scripts/source_digest.sh", "Dockerfile", ".dockerignore", "pyproject.toml", "uv.lock", ".github/workflows/CI_docker_build.yml"]
   workflow_dispatch:
 
 permissions:
@@ -34,12 +34,15 @@ jobs:
           context: .
           load: true
           tags: driftops:ci
+          build-args: GIT_SHA=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: smoke (CLI answers, runs as non-root)
+      - name: smoke (this commit's code, CLI answers, non-root)
         run: |
+          test "$(scripts/source_digest.sh driftops:ci)" = "$(scripts/source_digest.sh)"
           docker run --rm driftops:ci --help
           test "$(docker run --rm --entrypoint id driftops:ci -u)" = "10001"
+          test "$(docker run --rm --entrypoint printenv driftops:ci DRIFTOPS_GIT_SHA)" = "${{ github.sha }}"
       - name: Trivy (fail on fixable critical CVEs)
         uses: aquasecurity/trivy-action@v0.36.0
         with:

@@ -4,6 +4,7 @@ CLUSTER    ?= driftops
 NAMESPACE  ?= driftops
 TAG        ?= dev-$(shell git rev-parse --short HEAD 2>/dev/null || echo none)-$(shell date +%s)
 IMAGE      := driftops:$(TAG)
+GIT_SHA    := $(shell git rev-parse --short HEAD 2>/dev/null)$(shell git diff --quiet 2>/dev/null || echo -dirty)
 SCENARIO   ?= covid
 
 .PHONY: help data champion cluster image deploy up reload down test lint smoke status logs sim-status
@@ -22,8 +23,11 @@ cluster:         ## create the k3d cluster (idempotent)
 	@k3d cluster list $(CLUSTER) >/dev/null 2>&1 || \
 	  k3d cluster create --config deploy/k3d.yaml --volume "$(CURDIR)/data:/data@server:0"
 
-image:           ## build the image and load it into the cluster
-	docker build -t $(IMAGE) .
+image:           ## build the image, prove it holds this checkout's code, load it into the cluster
+	docker build --build-arg GIT_SHA=$(GIT_SHA) -t $(IMAGE) .
+	@test "$$(scripts/source_digest.sh $(IMAGE))" = "$$(scripts/source_digest.sh)" \
+	  || { echo "image source != checkout source: stale build"; exit 1; }
+	@echo "image $(IMAGE) holds source $$(scripts/source_digest.sh)"
 	k3d image import $(IMAGE) -c $(CLUSTER)
 	@echo $(TAG) > .image-tag
 

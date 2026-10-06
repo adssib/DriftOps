@@ -24,6 +24,7 @@ class Settings:
     log_queue_size: int = 20_000
     lookup_timeout_ms: int = 200
     port: int = 8000
+    git_sha: str = "unknown"  # baked into the image at build time
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -42,4 +43,5 @@ class Settings:
             log_queue_size=int(e.get("DRIFTOPS_LOG_QUEUE_SIZE", d.log_queue_size)),
             lookup_timeout_ms=int(e.get("DRIFTOPS_LOOKUP_TIMEOUT_MS", d.lookup_timeout_ms)),
             port=int(e.get("DRIFTOPS_PORT", d.port)),
+            git_sha=e.get("DRIFTOPS_GIT_SHA", d.git_sha),
         )

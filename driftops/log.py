@@ -7,6 +7,7 @@ decision_id. Loki indexes only low-cardinality labels; IDs stay inside the line.
 from __future__ import annotations
 
 import logging
+import os
 import sys
 
 import structlog
@@ -28,5 +29,7 @@ def setup(component: str, level: str = "INFO") -> structlog.stdlib.BoundLogger:
         logger_factory=structlog.PrintLoggerFactory(file=sys.stdout),
         cache_logger_on_first_use=True,
     )
-    structlog.contextvars.bind_contextvars(component=component)
+    structlog.contextvars.bind_contextvars(
+        component=component, git_sha=os.environ.get("DRIFTOPS_GIT_SHA", "unknown")
+    )
     return structlog.get_logger()

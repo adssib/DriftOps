@@ -181,3 +181,10 @@ def test_run_id_only_from_the_simulator(make_client):
     while len(records) < 2 and time.monotonic() < end:
         time.sleep(0.01)
     assert [(r["source"], r["run_id"]) for r in records] == [("user", None), ("sim", 5)]
+
+
+def test_readyz_and_metrics_say_which_build_runs(make_client, monkeypatch):
+    client, _ = make_client()
+    assert ready(client)
+    assert "git_sha" in client.get("/readyz").json()
+    assert "driftops_build_info{" in client.get("/metrics").text

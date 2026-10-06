@@ -75,6 +75,7 @@ class Metrics:
         self.warnings = Counter(
             "driftops_request_warnings", "Request warnings", ["kind"], registry=r
         )
+        self.build_info = Gauge("driftops_build_info", "Running build", ["git_sha"], registry=r)
 
 
 class State:
@@ -93,6 +94,7 @@ def create_app(
     metrics: Metrics | None = None,
 ) -> FastAPI:
     m = metrics or Metrics()
+    m.build_info.labels(settings.git_sha).set(1)
     logger.on_logged = lambda n: m.logged.inc(n)
     logger.on_dropped = lambda n, reason: m.dropped.labels(reason).inc(n)
     state = State()
@@ -175,6 +177,7 @@ def create_app(
         fill = logger.fill_ratio()
         m.queue_fill.set(fill)
         body = {
+            "git_sha": settings.git_sha,
             "model_version": state.version,
             "queue_fill": round(fill, 3),
             "logged": logger.logged,
