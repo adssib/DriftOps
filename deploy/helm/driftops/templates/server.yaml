@@ -1,0 +1,104 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-server
+  labels: {{- include "driftops.labels" . | nindent 4 }}
+spec:
+  selector: {{- include "driftops.selector" (dict "root" . "component" "server") | nindent 4 }}
+  ports:
+    - {name: http, port: 80, targetPort: http}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-server
+  labels:
+    {{- include "driftops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: server
+spec:
+  replicas: {{ .Values.server.replicas }}
+  strategy:
+    rollingUpdate: {maxUnavailable: 0, maxSurge: 1}   # never below the replica count
+  selector:
+    matchLabels: {{- include "driftops.selector" (dict "root" . "component" "server") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "driftops.labels" . | nindent 8 }}
+        app.kubernetes.io/component: server
+        driftops.io/model-version: {{ .Values.model.version | quote }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+    spec:
+      {{- include "driftops.podSecurity" . | nindent 6 }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: {{- include "driftops.selector" (dict "root" . "component" "server") | nindent 14 }}
+      containers:
+        - name: server
+          image: {{ include "driftops.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["serve"]
+          env:
+            {{- include "driftops.env" . | nindent 12 }}
+            - {name: DRIFTOPS_MODEL_VERSION, value: {{ .Values.model.version | quote }}}
+            - {name: DRIFTOPS_LOG_QUEUE_SIZE, value: {{ .Values.server.logQueueSize | quote }}}
+            - {name: DRIFTOPS_LOOKUP_TIMEOUT_MS, value: {{ .Values.server.lookupTimeoutMs | quote }}}
+            - {name: DRIFTOPS_CORS_ORIGINS, value: {{ .Values.server.corsOrigins | quote }}}
+            # LightGBM's OpenMP pool otherwise sizes itself to the node, not the pod's CPU limit
+            - {name: OMP_NUM_THREADS, value: "1"}
+            - name: DRIFTOPS_SIM_TOKEN
+              valueFrom:
+                secretKeyRef: {name: {{ .Release.Name }}-secrets, key: sim-token}
+          ports:
+            - {name: http, containerPort: 8000}
+          # liveness never checks dependencies (OPERATIONS § 1)
+          startupProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 3
+            timeoutSeconds: 2
+            failureThreshold: 2
+          resources: {{- toYaml .Values.server.resources | nindent 12 }}
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}   # the model bundle is downloaded here
+      volumes:
+        - {name: tmp, emptyDir: {sizeLimit: 512Mi}}
+{{- if .Values.ingress.enabled }}
+---
+# Only the public paths. /metrics stays inside the cluster (OPERATIONS § 5).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-server
+  labels: {{- include "driftops.labels" . | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - {{- with .Values.ingress.host }}
+      host: {{ . }}
+      {{- end }}
+      http:
+        paths:
+          {{- range list "/predict" "/healthz" "/readyz" }}
+          - path: {{ . }}
+            pathType: Exact
+            backend:
+              service:
+                name: {{ $.Release.Name }}-server
+                port: {name: http}
+          {{- end }}
+{{- end }}

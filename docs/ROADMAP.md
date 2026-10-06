@@ -45,5 +45,7 @@ in [STACK.md](STACK.md); how it's run is in [OPERATIONS.md](OPERATIONS.md).
 
 ## Current status
 
-**Research done. Phase 1 is next**; its implementation plan is in
-[`docs/plans/`](plans/).
+**Phase 1 done** ([plan](plans/2026-10-06-phase-1-serving-on-k3d.md)): `make up` brings the
+system up on k3d (k3s 1.36.4); `helm test` and a request through the ingress pass; 75 tests.
+Measured over 5 minutes of the COVID scenario: 88 req/s, 100% 200s, p95 ≤ 100 ms, 26,754
+predictions logged, 0 dropped, 0 restarts (OPERATIONS § 7). **Phase 2 is next.**

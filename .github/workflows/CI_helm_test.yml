@@ -1,0 +1,47 @@
+# The chart, per environment, in parallel: helm lint, render, validate every manifest against
+# the Kubernetes API schema (kubeconform, strict), and check the values schema rejects bad input.
+name: CI_helm_test
+
+on:
+  pull_request:
+    paths: ["deploy/**", ".github/workflows/CI_helm_test.yml"]
+  push:
+    paths: ["deploy/**", ".github/workflows/CI_helm_test.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CHART: deploy/helm/driftops
+  KUBECONFORM: v0.8.0
+  K8S_VERSION: 1.36.4   # the version k3d and AKS run (deploy/k3d.yaml)
+
+jobs:
+  chart:
+    name: helm ${{ matrix.env }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [dev, prod]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: helm lint
+        run: helm lint $CHART -f $CHART/values-${{ matrix.env }}.yaml --set image.tag=ci --strict
+      - name: kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/download/$KUBECONFORM/kubeconform-linux-amd64.tar.gz | tar xz
+          helm template driftops $CHART -f $CHART/values-${{ matrix.env }}.yaml --set image.tag=ci \
+            | ./kubeconform -strict -summary -kubernetes-version $K8S_VERSION
+      - name: values schema rejects bad input
+        run: |
+          ! helm template driftops $CHART -f $CHART/values-${{ matrix.env }}.yaml 2>/dev/null                       # no image tag
+          ! helm template driftops $CHART -f $CHART/values-${{ matrix.env }}.yaml --set image.tag=ci \
+              --set simulator.scenario=nope 2>/dev/null                                                         # unknown scenario

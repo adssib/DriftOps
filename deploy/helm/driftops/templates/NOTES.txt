@@ -1,0 +1,6 @@
+DriftOps {{ .Chart.AppVersion }} — serving model v{{ .Values.model.version }}, scenario "{{ .Values.simulator.scenario }}".
+
+  Predict:     curl -X POST localhost:8080/predict -H 'content-type: application/json' \
+                 -d '{"carrier":"AA","origin":"ORD","dest":"LGA","flight_date":"2020-03-27","dep_time":"18:05"}'
+  Simulator:   make sim-status
+  MLflow UI:   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Release.Name }}-mlflow 5000

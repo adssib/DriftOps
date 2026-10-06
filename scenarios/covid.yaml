@@ -1,0 +1,9 @@
+# The COVID shock, from the day after the seeded history ends (ADR-0014).
+# 10 s per simulated day: detection, retrains and the gate fit in ~8 minutes of a session.
+name: covid
+seconds_per_day: 10
+sample_pct: 5          # ~1,000 flights a simulated day before the collapse, ~100 req/s
+segments:
+  - name: covid-shock
+    start: 2020-03-10
+    end: 2020-05-31

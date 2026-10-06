@@ -1,0 +1,21 @@
+# One chart, values per environment (ADR-0017). Upstream charts join here, pinned, in later
+# phases: kube-prometheus-stack, Loki, Alloy (2), Argo Rollouts (4), KEDA (8).
+#   IMAGE_TAG=... helmfile -f deploy/helmfile.yaml.gotmpl -e dev apply
+environments:
+  dev: {}
+  prod: {}
+---
+releases:
+  - name: driftops
+    namespace: driftops
+    createNamespace: true
+    chart: ./helm/driftops
+    wait: true
+    waitForJobs: true
+    timeout: 900
+    values:
+      - ./helm/driftops/values-{{ .Environment.Name }}.yaml
+      - image:
+          tag: {{ requiredEnv "IMAGE_TAG" | quote }}
+        simulator:
+          scenario: {{ env "SCENARIO" | default "covid" | quote }}

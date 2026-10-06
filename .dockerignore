@@ -1,0 +1,10 @@
+.git
+.venv*
+data
+reports
+docs
+tests
+vendor
+deploy
+**/__pycache__
+*.pyc

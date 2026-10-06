@@ -1,0 +1,33 @@
+# `helm test`: one real prediction against the in-cluster service after every install.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ .Release.Name }}-test-predict
+  labels: {{- include "driftops.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation   # keep the pod so `helm test --logs` can read it
+spec:
+  restartPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 100
+    seccompProfile: {type: RuntimeDefault}
+  containers:
+    - name: predict
+      image: curlimages/curl:8.11.1
+      command: ["sh", "-c"]
+      args:
+        - >-
+          curl -fsS http://{{ .Release.Name }}-server/readyz &&
+          curl -fsS -X POST http://{{ .Release.Name }}-server/predict
+          -H 'content-type: application/json'
+          -d '{"carrier":"AA","origin":"ORD","dest":"LGA","flight_date":"2020-03-27","dep_time":"18:05"}'
+          | grep -q p_disrupted
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities: {drop: [ALL]}
+      resources:
+        requests: {cpu: 10m, memory: 16Mi}
+        limits: {memory: 64Mi}

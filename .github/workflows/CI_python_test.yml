@@ -1,0 +1,42 @@
+# Unit tests, including the DB tests against a real Postgres 17 (partitions, BRIN pruning,
+# seed idempotency) that are skipped locally without DRIFTOPS_TEST_DB_URL.
+name: CI_python_test
+
+on:
+  pull_request:
+    paths: ["driftops/**", "tests/**", "scenarios/**", "pyproject.toml", "uv.lock", ".github/workflows/CI_python_test.yml"]
+  push:
+    paths: ["driftops/**", "tests/**", "scenarios/**", "pyproject.toml", "uv.lock", ".github/workflows/CI_python_test.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    name: pytest (with Postgres 17)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: driftops
+          POSTGRES_PASSWORD: driftops
+          POSTGRES_DB: driftops
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U driftops" --health-interval 5s --health-retries 10
+    env:
+      DRIFTOPS_TEST_DB_URL: postgresql://driftops:driftops@localhost:5432/driftops
+      MLFLOW_DISABLE_AGENT_HINT: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: {enable-cache: true}
+      - run: uv sync --frozen
+      - run: uv run pytest -q

@@ -1,0 +1,46 @@
+{{- if .Values.simulator.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-simulator
+  labels:
+    {{- include "driftops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: simulator
+spec:
+  replicas: 1
+  strategy: {type: Recreate}   # one clock, one writer
+  selector:
+    matchLabels: {{- include "driftops.selector" (dict "root" . "component" "simulator") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "driftops.labels" . | nindent 8 }}
+        app.kubernetes.io/component: simulator
+      annotations:
+        driftops.io/scenario: {{ .Values.simulator.scenario }}
+    spec:
+      {{- include "driftops.podSecurity" . | nindent 6 }}
+      containers:
+        - name: simulator
+          image: {{ include "driftops.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["simulate"]
+          env:
+            {{- include "driftops.env" . | nindent 12 }}
+            - {name: DRIFTOPS_SCENARIO, value: /app/scenarios/{{ .Values.simulator.scenario }}.yaml}
+            - {name: DRIFTOPS_SERVER_URL, value: http://{{ .Release.Name }}-server}
+            - name: DRIFTOPS_SIM_TOKEN
+              valueFrom:
+                secretKeyRef: {name: {{ .Release.Name }}-secrets, key: sim-token}
+          ports:
+            - {name: http, containerPort: 8000}
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 15
+          resources: {{- toYaml .Values.simulator.resources | nindent 12 }}
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - {name: tmp, emptyDir: {}}
+{{- end }}

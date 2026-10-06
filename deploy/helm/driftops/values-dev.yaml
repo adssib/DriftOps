@@ -1,0 +1,14 @@
+# k3d on a laptop: small, local image, data from the host folder mounted into the node.
+image:
+  pullPolicy: Never       # imported with `k3d image import`
+postgres:
+  storage: 3Gi
+  storageClass: local-path
+mlflow:
+  storageClass: local-path
+  workers: 1
+seed:
+  hostPath: /data
+server:
+  replicas: 2
+  corsOrigins: "http://localhost:5173"

@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-mlflow-artifacts
+  labels: {{- include "driftops.labels" . | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  {{- with .Values.mlflow.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests: {storage: {{ .Values.mlflow.storage }}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-mlflow
+  labels: {{- include "driftops.labels" . | nindent 4 }}
+spec:
+  selector: {{- include "driftops.selector" (dict "root" . "component" "mlflow") | nindent 4 }}
+  ports:
+    - {name: http, port: 5000, targetPort: 5000}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-mlflow
+  labels:
+    {{- include "driftops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mlflow
+spec:
+  replicas: 1
+  strategy: {type: Recreate}   # one ReadWriteOnce volume
+  selector:
+    matchLabels: {{- include "driftops.selector" (dict "root" . "component" "mlflow") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "driftops.labels" . | nindent 8 }}
+        app.kubernetes.io/component: mlflow
+    spec:
+      {{- include "driftops.podSecurity" . | nindent 6 }}
+      initContainers: {{- include "driftops.waitForPostgres" . | nindent 8 }}
+      containers:
+        - name: mlflow
+          image: {{ include "driftops.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["mlflow", "--port", "5000"]
+          env:
+            - name: DRIFTOPS_DB_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: {{ .Release.Name }}-secrets, key: db-password}
+            - name: MLFLOW_BACKEND_STORE_URI
+              value: postgresql+psycopg://driftops:$(DRIFTOPS_DB_PASSWORD)@{{ .Release.Name }}-postgres:5432/mlflow
+            - {name: MLFLOW_ARTIFACTS_DESTINATION, value: /mlartifacts}
+            - name: MLFLOW_ALLOWED_HOSTS
+              value: "{{ .Release.Name }}-mlflow,{{ .Release.Name }}-mlflow:5000,{{ .Release.Name }}-mlflow.{{ .Release.Namespace }}.svc.cluster.local:5000,localhost:*,127.0.0.1:*"
+            - {name: MLFLOW_WORKERS, value: {{ .Values.mlflow.workers | quote }}}
+          ports:
+            - {name: http, containerPort: 5000}
+          startupProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 3
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 20
+            failureThreshold: 6
+          resources: {{- toYaml .Values.mlflow.resources | nindent 12 }}
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          volumeMounts:
+            - {name: artifacts, mountPath: /mlartifacts}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: artifacts
+          persistentVolumeClaim: {claimName: {{ .Release.Name }}-mlflow-artifacts}
+        - {name: tmp, emptyDir: {}}
