@@ -1,0 +1,55 @@
+# One image for every component (ADR-0009): build, smoke-test, scan for critical CVEs, and on
+# main only push to GHCR by commit SHA (never `latest`) for the AKS session to pull.
+name: CI_docker_build
+
+on:
+  pull_request:
+    paths: ["driftops/**", "scenarios/**", "Dockerfile", ".dockerignore", "pyproject.toml", "uv.lock", ".github/workflows/CI_docker_build.yml"]
+  push:
+    paths: ["driftops/**", "scenarios/**", "Dockerfile", ".dockerignore", "pyproject.toml", "uv.lock", ".github/workflows/CI_docker_build.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: ghcr.io/adssib/driftops
+
+jobs:
+  build:
+    name: docker build + smoke + Trivy (+ push on main)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: driftops:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: smoke (CLI answers, runs as non-root)
+        run: |
+          docker run --rm driftops:ci --help
+          test "$(docker run --rm --entrypoint id driftops:ci -u)" = "10001"
+      - name: Trivy (fail on fixable critical CVEs)
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: driftops:ci
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: push to GHCR
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker tag driftops:ci $IMAGE:${{ github.sha }}
+          docker push $IMAGE:${{ github.sha }}

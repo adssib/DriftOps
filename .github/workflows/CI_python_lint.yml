@@ -1,0 +1,29 @@
+# ruff: lint rules and formatting, the same check `make lint` runs locally.
+name: CI_python_lint
+
+on:
+  pull_request:
+    paths: ["driftops/**", "tests/**", "scripts/**", "pyproject.toml", ".github/workflows/CI_python_lint.yml"]
+  push:
+    paths: ["driftops/**", "tests/**", "scripts/**", "pyproject.toml", ".github/workflows/CI_python_lint.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ruff:
+    name: ruff check + format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: {enable-cache: true}
+      - run: uv sync --frozen --only-dev
+      - run: uv run --no-sync ruff check .
+      - run: uv run --no-sync ruff format --check .
