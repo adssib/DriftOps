@@ -6,7 +6,7 @@ metadata:
   labels: {{- include "driftops.labels" . | nindent 4 }}
   annotations:
     helm.sh/hook: test
-    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-delete-policy: before-hook-creation   # keep the pod so `helm test --logs` can read it
 spec:
   restartPolicy: Never
   securityContext:
