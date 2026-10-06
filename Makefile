@@ -2,7 +2,7 @@
 SHELL := /bin/bash
 CLUSTER    ?= driftops
 NAMESPACE  ?= driftops
-TAG        ?= dev-$(shell git rev-parse --short HEAD 2>/dev/null || echo none)-$(shell date +%s)
+TAG        := dev-$(shell git rev-parse --short HEAD 2>/dev/null || echo none)-$(shell date +%s)
 IMAGE      := driftops:$(TAG)
 GIT_SHA    := $(shell git rev-parse --short HEAD 2>/dev/null)$(shell git diff --quiet 2>/dev/null || echo -dirty)
 SCENARIO   ?= covid
