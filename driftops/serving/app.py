@@ -213,6 +213,8 @@ def create_app(
         if model is None:
             return done(503, {"detail": "model not loaded", "request_id": rid})
         source = source_of(request)
+        run_header = request.headers.get("x-driftops-run", "")
+        run_id = int(run_header) if source == "sim" and run_header.isdigit() else None
         try:
             req = PredictRequest.model_validate_json(body)
             if source == "user":
@@ -241,6 +243,7 @@ def create_app(
                 "request_id": rid,
                 "flight_id": req.flight_id,
                 "source": source,
+                "run_id": run_id,
                 "event_time": event_time(req),
                 "model_version": state.version,
                 "features": row,

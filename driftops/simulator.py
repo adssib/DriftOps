@@ -141,6 +141,7 @@ def payload(row: dict) -> dict:
 @dataclass
 class Status:
     scenario: str = ""
+    run_id: int | None = None
     day: str | None = None
     segment: str | None = None
     sent: int = 0
@@ -152,6 +153,7 @@ class Status:
     def as_dict(self) -> dict:
         return {
             "scenario": self.scenario,
+            "run_id": self.run_id,
             "day": self.day,
             "segment": self.segment,
             "sent": self.sent,
@@ -171,13 +173,26 @@ ORDER BY event_time, flight_id
 """
 
 CLOCK_SQL = """
-INSERT INTO sim_clock (id, now, scenario, segment, updated_at) VALUES (1, %s, %s, %s, now())
+INSERT INTO sim_clock (id, now, scenario, segment, run_id, updated_at)
+VALUES (1, %s, %s, %s, %s, now())
 ON CONFLICT (id) DO UPDATE SET now = EXCLUDED.now, scenario = EXCLUDED.scenario,
-    segment = EXCLUDED.segment, updated_at = now()
+    segment = EXCLUDED.segment, run_id = EXCLUDED.run_id, updated_at = now()
 """
 
+RUN_SQL = "INSERT INTO runs (scenario, sim_start) VALUES (%s, %s) RETURNING run_id"
 
-async def replay(scenario: Scenario, conn, make_client, status: Status, log) -> None:
+
+def register_run(conn, scenario: Scenario) -> int:
+    """Every simulator start is a new run: a restart rewinds the clock, and everything the run
+    produces (predictions, monitor results, decisions) is keyed by its id."""
+    first_day = next(scenario.days())[0]
+    start = dt.datetime.combine(first_day, dt.time())
+    return conn.execute(RUN_SQL, (scenario.name, start)).fetchone()[0]
+
+
+async def replay(
+    scenario: Scenario, conn, make_client, status: Status, log, run_id: int | None = None
+) -> None:
     """Replay every day of the scenario.
 
     A fresh HTTP client (connection pool) per simulated day: a Kubernetes Service balances per
@@ -217,12 +232,12 @@ async def replay(scenario: Scenario, conn, make_client, status: Status, log) -> 
             status.sent += 1
             if time.monotonic() - last_clock >= 1.0:
                 await asyncio.to_thread(
-                    _set_clock, conn, row["event_time"], scenario.name, seg.name
+                    _set_clock, conn, row["event_time"], scenario.name, seg.name, run_id
                 )
                 last_clock = time.monotonic()
         await asyncio.gather(*tasks)
         end_of_day = dt.datetime.combine(day + dt.timedelta(days=1), dt.time())
-        await asyncio.to_thread(_set_clock, conn, end_of_day, scenario.name, seg.name)
+        await asyncio.to_thread(_set_clock, conn, end_of_day, scenario.name, seg.name, run_id)
         log.info(
             "day_replayed",
             sim_day=day.isoformat(),
@@ -244,8 +259,8 @@ def _fetch_day(conn, day: dt.date, sample_pct: int) -> list[dict]:
         return [dict(zip(cols, r)) for r in cur.fetchall()]
 
 
-def _set_clock(conn, now: dt.datetime, scenario: str, segment: str) -> None:
-    conn.execute(CLOCK_SQL, (now, scenario, segment))
+def _set_clock(conn, now: dt.datetime, scenario: str, segment: str, run_id: int | None) -> None:
+    conn.execute(CLOCK_SQL, (now, scenario, segment, run_id))
 
 
 def run(scenario_path: str | None = None) -> int:
@@ -273,7 +288,12 @@ def run(scenario_path: str | None = None) -> int:
             except Exception as e:  # noqa: BLE001 - keep waiting for the database
                 lg.info("waiting_for_db", error=str(e)[:200])
                 await asyncio.sleep(5)
-        headers = {"Authorization": f"Bearer {s.sim_token}"} if s.sim_token else {}
+        run_id = await asyncio.to_thread(register_run, conn, scenario)
+        status.run_id = run_id
+        lg.info("run_registered", run_id=run_id, scenario=scenario.name)
+        headers = {"X-DriftOps-Run": str(run_id)}
+        if s.sim_token:
+            headers["Authorization"] = f"Bearer {s.sim_token}"
         limits = httpx.Limits(
             max_connections=scenario.concurrency, max_keepalive_connections=scenario.concurrency
         )
@@ -285,7 +305,7 @@ def run(scenario_path: str | None = None) -> int:
 
         async with make_client() as probe:
             await _wait_ready(probe, lg)
-        await replay(scenario, conn, make_client, status, lg)
+        await replay(scenario, conn, make_client, status, lg, run_id)
 
     @asynccontextmanager
     async def lifespan(app):

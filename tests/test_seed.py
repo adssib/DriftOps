@@ -71,3 +71,54 @@ def test_seed_is_idempotent(db_url, tmp_path, monkeypatch):
             for t in ("flights", "outcomes_feed", "outcomes")
         ]
     assert counts == [3, 3, 2]  # two outcomes known before the cutoff
+
+
+def test_history_traffic_once(db_url, tmp_path):
+    from driftops import bundle, db
+
+    path = tmp_path / "2020-03.parquet"
+    raw_rows().to_parquet(path)
+    lg = __import__("structlog").get_logger()
+    model = _tiny()
+    bundle.save_bundle(tmp_path / "v1", model)
+    with db.connect(db_url) as conn:
+        db.apply_schema(conn)
+        conn.autocommit = True
+        seed.seed_month(conn, path, pd.Timestamp("2020-03-02"), lg)
+        cutoff = pd.Timestamp("2020-03-03")
+        first = seed.seed_history_traffic(conn, tmp_path / "v1", cutoff, 100, lg)
+        second = seed.seed_history_traffic(conn, tmp_path / "v1", cutoff, 100, lg)
+        rows = conn.execute(
+            "SELECT count(*), count(*) FILTER (WHERE run_id IS NULL AND source = 'sim') FROM predictions"
+        ).fetchone()
+    assert (first, second) == (3, 0)
+    assert rows == (3, 3)
+
+
+def _tiny():
+    import numpy as np
+
+    from driftops import features as F
+    from driftops import model as M
+
+    rng = np.random.default_rng(1)
+    n = 500
+    df = pd.DataFrame(
+        {
+            "flight_date": pd.Timestamp("2018-01-01")
+            + pd.to_timedelta(rng.integers(0, 30, n), unit="D"),
+            "carrier": rng.choice(["AA", "DL"], n),
+            "origin": rng.choice(["ORD", "ATL"], n),
+            "dest": rng.choice(["LGA", "SEA"], n),
+            **{c: rng.integers(0, 24, n) for c in ["dep_hour", "arr_hour"]},
+            **{
+                c: rng.uniform(1, 50, n)
+                for c in ["distance", "sched_minutes", "origin_hour_load", "dest_hour_load"]
+            },
+            "month": rng.integers(1, 13, n),
+            "day_of_week": rng.integers(0, 7, n),
+            "days_to_holiday": rng.integers(0, 30, n),
+        }
+    )
+    df[F.LABEL] = (rng.random(n) < 0.3).astype("int8")
+    return M.train(df, "v1", rounds=5, threads=1)

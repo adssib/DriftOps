@@ -12,15 +12,18 @@ is registered only if the registry is empty.
 from __future__ import annotations
 
 import time
+import uuid
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from driftops import db, log, registry
+from driftops import bundle, db, log, registry
 from driftops import features as F
 from driftops.config import Settings
 from driftops.data import months as month_range
+
+HISTORY_SAMPLE_PCT = 5  # the scenarios' sample: history traffic must look like live traffic
 
 FLIGHT_COLUMNS = [
     "flight_id",
@@ -149,9 +152,52 @@ def run(months: str, history_until: str, settings: Settings | None = None) -> in
                ON CONFLICT (id) DO NOTHING""",
             (cutoff.to_pydatetime(),),
         )
+        seed_history_traffic(
+            conn, Path(s.seed_dir) / "bundles" / "v1", cutoff, HISTORY_SAMPLE_PCT, lg
+        )
     register_champion(s, lg)
     lg.info("seed_done", flights_loaded=total, seconds=round(time.perf_counter() - t0, 1))
     return 0
+
+
+HISTORY_SQL = """
+SELECT flight_id, event_time, carrier, origin, dest, dep_hour, arr_hour, distance, sched_minutes,
+       origin_hour_load, dest_hour_load, month, day_of_week, days_to_holiday
+FROM flights
+WHERE flight_date < %s AND sample_bucket < %s
+ORDER BY event_time
+"""
+
+
+def seed_history_traffic(conn, bundle_dir: Path, cutoff: pd.Timestamp, sample_pct: int, lg) -> int:
+    """Champion v1's scores for the replayed sample before the cutoff, as if it had served them.
+
+    Stored with run_id NULL: part of every run, so the monitors' first windows on the scenario's
+    first day are full, as they were in the backtest (ADR-0014). Skipped if already present.
+    """
+    if conn.execute("SELECT EXISTS (SELECT 1 FROM predictions WHERE run_id IS NULL)").fetchone()[0]:
+        lg.info("history_traffic_skipped", reason="already present")
+        return 0
+    with conn.cursor() as cur:
+        cur.execute(HISTORY_SQL, (cutoff.date(), sample_pct))
+        df = pd.DataFrame(cur.fetchall(), columns=[c.name for c in cur.description])
+    model = bundle.load_bundle(bundle_dir)
+    out = pd.DataFrame(
+        {
+            "request_id": [str(uuid.uuid4()) for _ in range(len(df))],
+            "flight_id": df["flight_id"],
+            "source": "sim",
+            "run_id": None,
+            "event_time": df["event_time"],
+            "model_version": 1,
+            "features": df[F.FEATURES].to_json(orient="records", lines=True).splitlines(),
+            "score": model.predict(df),
+            "latency_ms": None,
+        }
+    )
+    db.copy_frame(conn, "predictions", out)
+    lg.info("history_traffic_loaded", rows=len(out), until=str(cutoff.date()))
+    return len(out)
 
 
 def register_champion(s: Settings, lg) -> None:

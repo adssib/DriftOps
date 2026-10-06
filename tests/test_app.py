@@ -168,3 +168,16 @@ def test_healthz_answers_while_predictions_run(make_client):
         health_s = time.perf_counter() - t0
         assert all(f.result().status_code == 200 for f in futures)
     assert health_s < 1.0
+
+
+def test_run_id_only_from_the_simulator(make_client):
+    client, records = make_client()
+    assert ready(client)
+    client.post("/predict", json=GOOD, headers={"X-DriftOps-Run": "5"})
+    client.post(
+        "/predict", json=GOOD, headers={"X-DriftOps-Run": "5", "Authorization": "Bearer s3cret"}
+    )
+    end = time.monotonic() + 2
+    while len(records) < 2 and time.monotonic() < end:
+        time.sleep(0.01)
+    assert [(r["source"], r["run_id"]) for r in records] == [("user", None), ("sim", 5)]
