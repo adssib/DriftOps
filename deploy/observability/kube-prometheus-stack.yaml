@@ -43,6 +43,8 @@ grafana:
     auth.anonymous:          # dev: anyone on localhost can look, nobody can edit
       enabled: true
       org_role: Viewer
+    users:
+      viewers_can_edit: true # Explore and the Drilldown apps for viewers; still nothing can be saved
     analytics:
       check_for_updates: false
       reporting_enabled: false
@@ -61,8 +63,8 @@ grafana:
       enabled: true
       searchNamespace: ALL   # our chart ships the DataQualityBreach rule
   resources:
-    requests: {cpu: 50m, memory: 192Mi}
-    limits: {memory: 512Mi}
+    requests: {cpu: 50m, memory: 384Mi}
+    limits: {memory: 1Gi}      # OOMKilled at 512Mi: Grafana 13 loads its bundled Drilldown apps
 
 kube-state-metrics:
   resources:
