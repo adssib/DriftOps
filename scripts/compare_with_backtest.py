@@ -79,6 +79,8 @@ def main() -> None:
     a = ap.parse_args()
     run = a.run or int(psql("SELECT run_id FROM sim_clock").strip())
     cluster = pd.read_csv(io.StringIO(psql(SQL.format(run=run))), parse_dates=["day"])
+    # Postgres CSV writes booleans as t/f, and the string "f" is truthy
+    cluster["alarm"] = cluster["alarm"].map({"t": True, "f": False, True: True, False: False})
     lim = Limits()
 
     drift = cluster[cluster.monitor == "drift"].set_index("day")
