@@ -1,0 +1,49 @@
+# Schema changes land before any new pod does (OPERATIONS § 4): the migration runs as a
+# pre-upgrade hook, so new code never writes to a column that doesn't exist yet. On first
+# install there is no database to migrate; the seed applies the schema. Forward-only, idempotent.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-migrate
+  labels:
+    {{- include "driftops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrate
+  annotations:
+    helm.sh/hook: pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        {{- include "driftops.labels" . | nindent 8 }}
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      {{- include "driftops.podSecurity" . | nindent 6 }}
+      initContainers: {{- include "driftops.waitForPostgres" . | nindent 8 }}
+      containers:
+        - name: migrate
+          image: {{ include "driftops.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["migrate"]
+          env:
+            {{- include "driftops.env" . | nindent 12 }}
+{{- if .Values.observability.enabled }}
+            # optional: a pre-upgrade hook runs BEFORE this release updates the Secret, so a key
+            # added in this release doesn't exist yet. The seed Job (after the Secret) creates the
+            # read-only role then; the migration does it on every later upgrade.
+            - name: DRIFTOPS_GRAFANA_DB_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: {{ .Release.Name }}-secrets, key: grafana-db-password, optional: true}
+{{- end }}
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {memory: 512Mi}
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - {name: tmp, emptyDir: {}}

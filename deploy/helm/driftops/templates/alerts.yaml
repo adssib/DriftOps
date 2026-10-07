@@ -1,0 +1,81 @@
+{{- if .Values.observability.enabled }}
+# Alerts as code (OPERATIONS § 3). severity=page wakes a human; severity=ticket can wait.
+# DataQualityBreach lives in Grafana (grafana-alerts.yaml): its signal is a row in Postgres.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Release.Name }}-alerts
+  labels: {{- include "driftops.labels" . | nindent 4 }}
+spec:
+  groups:
+    - name: driftops-slo
+      rules:
+        - record: driftops:predict_error_ratio:rate5m
+          expr: |
+            sum(rate(driftops_requests_total{endpoint="predict",status=~"5.."}[5m]))
+            / clamp_min(sum(rate(driftops_requests_total{endpoint="predict"}[5m])), 1e-9)
+        - record: driftops:predict_error_ratio:rate1h
+          expr: |
+            sum(rate(driftops_requests_total{endpoint="predict",status=~"5.."}[1h]))
+            / clamp_min(sum(rate(driftops_requests_total{endpoint="predict"}[1h])), 1e-9)
+        - alert: PredictErrorBudgetBurn
+          # 99.5% availability SLO: burning 14.4x the budget over 1h AND still burning over 5m
+          expr: |
+            driftops:predict_error_ratio:rate1h > (14.4 * 0.005)
+            and driftops:predict_error_ratio:rate5m > (14.4 * 0.005)
+          labels: {severity: page}
+          annotations:
+            summary: /predict is burning its error budget ({{ "{{" }} $value | humanizePercentage {{ "}}" }} errors)
+        - alert: PredictLatencyHigh
+          expr: |
+            histogram_quantile(0.95, sum by (le) (rate(driftops_request_seconds_bucket{endpoint="predict"}[5m]))) > 0.25
+          for: 10m
+          labels: {severity: page}
+          annotations:
+            summary: /predict p95 above 250 ms for 10 minutes
+        - alert: NoReadyServerPods
+          expr: kube_deployment_status_replicas_available{namespace="{{ .Release.Namespace }}",deployment="{{ .Release.Name }}-server"} == 0
+          for: 1m
+          labels: {severity: page}
+          annotations:
+            summary: no model server pod is ready
+        - alert: PredictionsDropped
+          expr: increase(driftops_predictions_dropped_total[5m]) > 0
+          for: 5m
+          labels: {severity: ticket}
+          annotations:
+            summary: predictions are not reaching Postgres (monitoring is blind to them)
+    - name: driftops-jobs
+      rules:
+        - alert: CronJobStale
+          # dead man's switch: a monitor or the feeder hasn't succeeded for 5 minutes
+          expr: time() - kube_cronjob_status_last_successful_time{namespace="{{ .Release.Namespace }}"} > 300
+          labels: {severity: page}
+          annotations:
+            summary: "{{ "{{" }} $labels.cronjob {{ "}}" }} has not succeeded for 5 minutes"
+        - alert: JobFailed
+          expr: kube_job_status_failed{namespace="{{ .Release.Namespace }}"} > 0
+          labels: {severity: page}
+          annotations:
+            summary: "job {{ "{{" }} $labels.job_name {{ "}}" }} failed"
+    - name: driftops-infra
+      rules:
+        - alert: PostgresDown
+          expr: pg_up{namespace="{{ .Release.Namespace }}"} == 0
+          for: 1m
+          labels: {severity: page}
+          annotations:
+            summary: Postgres is not answering
+        - alert: PostgresConnectionsHigh
+          expr: sum(pg_stat_activity_count{namespace="{{ .Release.Namespace }}"}) / max(pg_settings_max_connections{namespace="{{ .Release.Namespace }}"}) > 0.8
+          for: 5m
+          labels: {severity: ticket}
+          annotations:
+            summary: Postgres connections above 80% of max_connections
+        - alert: UptimeProbeFailing
+          expr: probe_success{service="driftops"} == 0
+          for: 2m
+          labels: {severity: page}
+          annotations:
+            summary: "{{ "{{" }} $labels.instance {{ "}}" }} is not answering from outside"
+{{- end }}

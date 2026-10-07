@@ -83,9 +83,8 @@ CREATE TABLE IF NOT EXISTS monitor_results (
     model_version integer     NOT NULL,
     metrics       jsonb       NOT NULL,
     alarm         boolean     NOT NULL,
-    created_at    timestamptz NOT NULL DEFAULT now(),
-    UNIQUE (monitor, window_end, model_version)   -- idempotent upserts from retried CronJobs
-);
+    created_at    timestamptz NOT NULL DEFAULT now()
+);  -- one row per (run_id, monitor, window_end, model_version): see the runs section below
 
 CREATE TABLE IF NOT EXISTS loop_events (
     id            bigserial   PRIMARY KEY,
@@ -112,3 +111,22 @@ CREATE TABLE IF NOT EXISTS watermarks (
     value      timestamp   NOT NULL,
     updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Phase 2: runs ------------------------------------------------------------------------------
+-- A simulator start is a run. Restarting rewinds the clock, so everything the run produces is
+-- keyed by run_id; outcomes are world truth and shared. predictions.run_id NULL = the seeded
+-- history traffic, part of every run (ADR-0014). ALTERs upgrade a Phase 1 database in place.
+CREATE TABLE IF NOT EXISTS runs (
+    run_id     serial      PRIMARY KEY,
+    scenario   text        NOT NULL,
+    sim_start  timestamp   NOT NULL,
+    started_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE predictions     ADD COLUMN IF NOT EXISTS run_id integer;
+ALTER TABLE loop_events     ADD COLUMN IF NOT EXISTS run_id integer;
+ALTER TABLE sim_clock       ADD COLUMN IF NOT EXISTS run_id integer;
+ALTER TABLE monitor_results ADD COLUMN IF NOT EXISTS run_id integer NOT NULL DEFAULT 0;
+ALTER TABLE monitor_results DROP CONSTRAINT IF EXISTS monitor_results_monitor_window_end_model_version_key;
+CREATE UNIQUE INDEX IF NOT EXISTS monitor_results_run_key
+    ON monitor_results (run_id, monitor, window_end, model_version);
+CREATE INDEX IF NOT EXISTS monitor_results_window ON monitor_results (run_id, monitor, window_end);

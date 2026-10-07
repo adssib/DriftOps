@@ -1,0 +1,42 @@
+# Loki 7.3.0 — single binary on a volume, 7 days of logs (OPERATIONS § 6, ADR-0018).
+deploymentMode: SingleBinary
+loki:
+  auth_enabled: false
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: filesystem
+  schemaConfig:
+    configs:
+      - from: "2024-01-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index: {prefix: index_, period: 24h}
+  limits_config:
+    retention_period: 168h
+    allow_structured_metadata: true
+    discover_log_levels: true     # Logs Drilldown: level from the JSON line
+    volume_enabled: true          # Logs Drilldown: volume by label
+  pattern_ingester:
+    enabled: true                 # Logs Drilldown: recurring log patterns
+  compactor:
+    retention_enabled: true
+    delete_request_store: filesystem
+singleBinary:
+  replicas: 1
+  persistence:
+    size: 2Gi
+  resources:
+    requests: {cpu: 50m, memory: 192Mi}
+    limits: {memory: 512Mi}
+read: {replicas: 0}
+write: {replicas: 0}
+backend: {replicas: 0}
+chunksCache: {enabled: false}
+resultsCache: {enabled: false}
+memcached: {enabled: false}
+minio: {enabled: false}
+gateway: {enabled: false}
+lokiCanary: {enabled: false}
+test: {enabled: false}

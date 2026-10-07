@@ -1,0 +1,59 @@
+{{- if .Values.observability.enabled }}
+# DataQualityBreach: the guard's "alert a human" (ADR-0005, OPERATIONS § 3). Its signal is a row
+# in Postgres, not a Prometheus metric, so Grafana evaluates it. Discovered by the alerts sidecar.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-grafana-alerts
+  labels:
+    {{- include "driftops.labels" . | nindent 4 }}
+    grafana_alert: "1"
+data:
+  driftops-alerts.yaml: |
+    apiVersion: 1
+    groups:
+      - orgId: 1
+        name: driftops-data-quality
+        folder: DriftOps
+        interval: 1m
+        rules:
+          - uid: driftops-data-quality-breach
+            title: DataQualityBreach
+            condition: C
+            for: 0s
+            noDataState: OK
+            execErrState: Error
+            labels:
+              severity: page
+            annotations:
+              summary: Data quality breached in the latest run; retraining is blocked
+              description: >-
+                A quality monitor window breached a limit (nulls, out-of-range values, unseen
+                codes or route-distance mismatch). The controller will not retrain on this data.
+                Open "DriftOps · Data quality" to see which rate.
+            data:
+              - refId: A
+                datasourceUid: driftops-postgres
+                relativeTimeRange: {from: 600, to: 0}
+                model:
+                  refId: A
+                  editorMode: code
+                  rawQuery: true
+                  format: table
+                  rawSql: >-
+                    SELECT count(*)::float AS breaches FROM monitor_results
+                    WHERE monitor = 'quality' AND alarm
+                      AND run_id = (SELECT max(run_id) FROM runs)
+                      AND created_at > now() - interval '5 minutes'
+              - refId: B
+                datasourceUid: __expr__
+                model: {refId: B, type: reduce, expression: A, reducer: last}
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  refId: C
+                  type: threshold
+                  expression: B
+                  conditions:
+                    - evaluator: {type: gt, params: [0]}
+{{- end }}

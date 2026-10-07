@@ -162,3 +162,16 @@ def test_replay_reconnects_every_simulated_day():
         S._fetch_day = orig
     assert FakeClient.made == 3  # one pool per simulated day
     assert status.sent == 9 and status.codes[200] == 9 and status.done
+
+
+def test_each_start_registers_a_new_run(db_url):
+    from driftops import db
+
+    with db.connect(db_url) as conn:
+        db.apply_schema(conn)
+        conn.autocommit = True
+        scenario = S.load_scenario("scenarios/covid.yaml")
+        a, b = S.register_run(conn, scenario), S.register_run(conn, scenario)
+        start = conn.execute("SELECT sim_start FROM runs WHERE run_id = %s", (b,)).fetchone()[0]
+    assert b == a + 1
+    assert start == dt.datetime(2020, 3, 10)

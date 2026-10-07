@@ -46,6 +46,16 @@ in [STACK.md](STACK.md); how it's run is in [OPERATIONS.md](OPERATIONS.md).
 ## Current status
 
 **Phase 1 done** ([plan](plans/2026-10-06-phase-1-serving-on-k3d.md)): `make up` brings the
-system up on k3d (k3s 1.36.4); `helm test` and a request through the ingress pass; 75 tests.
-Measured over 5 minutes of the COVID scenario: 88 req/s, 100% 200s, p95 ≤ 100 ms, 26,754
-predictions logged, 0 dropped, 0 restarts (OPERATIONS § 7). **Phase 2 is next.**
+system up on k3d (k3s 1.36.4); `helm test` and a request through the ingress pass. On verified
+code, 5 minutes of the COVID scenario: 92 req/s, 100% 200s, 0 dropped, p50 ≤ 10 ms, but
+**p95 ≤ 250 ms, over the 100 ms SLO**; performance is measured on AKS in Phase 8
+(OPERATIONS § 7, including a correction of the first Phase 1 numbers).
+
+**Phase 2 done** ([2a](plans/2026-10-06-phase-2a-monitors.md), [2b](plans/2026-10-06-phase-2b-observability.md)):
+label feeder and three monitors as CronJobs; Prometheus, Grafana (5 dashboards as code,
+Drilldown), Loki, uptime probes, 12 alerts as code. **The cluster's alarms land on the
+backtest's days** (`runs/phase2/agreement.json`): label drift 2020-03-27 and feature drift
+2020-04-10 in both, daily correlation ≥ 0.993. The corruption scenario (`runs/phase2/corruption.json`):
+data quality breached on the first corrupted day (Feb 3) and drift followed on `distance` (Feb 6),
+labels stayed quiet, and Grafana's DataQualityBreach fired. Alerts are not routed to a receiver yet.
+**Phase 3 is next.**

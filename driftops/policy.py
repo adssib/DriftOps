@@ -59,18 +59,12 @@ class Controller:
         self.quarantine: list[tuple[pd.Timestamp, pd.Timestamp]] = []
 
     def alarms(self, s: Signals) -> list[str]:
-        lim, out = self.limits, []
-        if s.psi_max_feature > lim.psi_feature:
-            out.append(f"feature:{s.worst_feature}")
-        if s.calibration_gap is not None and abs(s.calibration_gap) > lim.calibration_gap:
-            out.append("label:calibration_gap")
-        if s.brier is not None and s.brier > lim.brier:
-            out.append("label:brier")
-        return out
+        return feature_alarms(s.psi_max_feature, s.worst_feature, self.limits) + label_alarms(
+            s.calibration_gap, s.brier, self.limits
+        )
 
     def quality_breaches(self, s: Signals) -> list[str]:
-        lim = self.limits
-        return [k for k, v in s.data_quality.items() if v > getattr(lim, k)]
+        return quality_breaches(s.data_quality, self.limits)
 
     def decide(self, day: pd.Timestamp, s: Signals) -> Decision:
         alarms = self.alarms(s)
@@ -106,6 +100,26 @@ class Controller:
         self.last_retrain = day
         self.run = 0
         return Decision("retrain", "sustained drift, data clean", alarms)
+
+
+# The alarm rules, shared by the controller and the monitors (one definition, ADR-0004) -------
+
+
+def feature_alarms(psi_max_feature: float, worst_feature: str, limits: Limits) -> list[str]:
+    return [f"feature:{worst_feature}"] if psi_max_feature > limits.psi_feature else []
+
+
+def label_alarms(calibration_gap: float | None, brier: float | None, limits: Limits) -> list[str]:
+    out = []
+    if calibration_gap is not None and abs(calibration_gap) > limits.calibration_gap:
+        out.append("label:calibration_gap")
+    if brier is not None and brier > limits.brier:
+        out.append("label:brier")
+    return out
+
+
+def quality_breaches(data_quality: dict[str, float], limits: Limits) -> list[str]:
+    return [k for k, v in data_quality.items() if v > getattr(limits, k)]
 
 
 @dataclass

@@ -75,6 +75,7 @@ class Metrics:
         self.warnings = Counter(
             "driftops_request_warnings", "Request warnings", ["kind"], registry=r
         )
+        self.build_info = Gauge("driftops_build_info", "Running build", ["git_sha"], registry=r)
 
 
 class State:
@@ -93,6 +94,7 @@ def create_app(
     metrics: Metrics | None = None,
 ) -> FastAPI:
     m = metrics or Metrics()
+    m.build_info.labels(settings.git_sha).set(1)
     logger.on_logged = lambda n: m.logged.inc(n)
     logger.on_dropped = lambda n, reason: m.dropped.labels(reason).inc(n)
     state = State()
@@ -175,6 +177,7 @@ def create_app(
         fill = logger.fill_ratio()
         m.queue_fill.set(fill)
         body = {
+            "git_sha": settings.git_sha,
             "model_version": state.version,
             "queue_fill": round(fill, 3),
             "logged": logger.logged,
@@ -213,6 +216,8 @@ def create_app(
         if model is None:
             return done(503, {"detail": "model not loaded", "request_id": rid})
         source = source_of(request)
+        run_header = request.headers.get("x-driftops-run", "")
+        run_id = int(run_header) if source == "sim" and run_header.isdigit() else None
         try:
             req = PredictRequest.model_validate_json(body)
             if source == "user":
@@ -241,6 +246,7 @@ def create_app(
                 "request_id": rid,
                 "flight_id": req.flight_id,
                 "source": source,
+                "run_id": run_id,
                 "event_time": event_time(req),
                 "model_version": state.version,
                 "features": row,

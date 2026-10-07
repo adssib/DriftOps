@@ -6,14 +6,17 @@ on:
   pull_request:
     paths: ["driftops/**", "tests/**", "scenarios/**", "pyproject.toml", "uv.lock", ".github/workflows/CI_python_test.yml"]
   push:
+    branches: [main]
     paths: ["driftops/**", "tests/**", "scenarios/**", "pyproject.toml", "uv.lock", ".github/workflows/CI_python_test.yml"]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# One run per PR (or per branch on main), always the newest commit: a new push cancels the
+# run in progress and anything queued. Different PRs never cancel each other.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:

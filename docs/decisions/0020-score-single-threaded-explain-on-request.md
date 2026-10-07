@@ -25,7 +25,11 @@ asks). Lookups and scoring run in the thread pool, never on the event loop.
 
 ## Consequences
 
-- ✅ ~8 ms of CPU per machine request; p95 ≤ 100 ms at 88 req/s on two 1-CPU pods.
+- ✅ ~8 ms of CPU per machine request (measured in-process); p50 ≤ 10 ms at 92 req/s on two
+  1-CPU pods, 5x better than before the change.
+- ⚠️ **Correction (2026-10-06):** this ADR first claimed "p95 ≤ 100 ms at 88 req/s". That run
+  was on a stale image without these changes (OPERATIONS § 7). With them verified, p95 is
+  ≤ 250 ms: the tail is not fixed by this decision and is measured on AKS in Phase 8.
 - ✅ Health checks answer under load.
 - ⚠️ Explained requests still cost ~22 ms; a public form with heavy traffic needs its own limits (Phase 7).
 - 🔭 Revisit if one request carries many rows: batch scoring benefits from threads.

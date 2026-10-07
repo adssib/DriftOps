@@ -1,0 +1,560 @@
+{
+ "uid": "driftops-loop",
+ "title": "DriftOps \u00b7 The loop",
+ "description": "The demo view: signals, alarms, decisions.",
+ "tags": [
+  "driftops",
+  "demo"
+ ],
+ "timezone": "utc",
+ "editable": false,
+ "schemaVersion": 39,
+ "time": {
+  "from": "2020-03-01T00:00:00.000Z",
+  "to": "2020-06-01T00:00:00.000Z"
+ },
+ "refresh": "30s",
+ "templating": {
+  "list": [
+   {
+    "name": "run",
+    "label": "Run",
+    "type": "query",
+    "datasource": {
+     "type": "grafana-postgresql-datasource",
+     "uid": "driftops-postgres"
+    },
+    "query": "SELECT run_id AS __value, 'run ' || run_id || ' \u00b7 ' || scenario AS __text FROM runs ORDER BY run_id DESC",
+    "refresh": 1,
+    "sort": 0,
+    "current": {}
+   }
+  ]
+ },
+ "annotations": {
+  "list": [
+   {
+    "builtIn": 1,
+    "datasource": {
+     "type": "grafana",
+     "uid": "-- Grafana --"
+    },
+    "enable": true,
+    "hide": true,
+    "name": "Annotations & Alerts",
+    "type": "dashboard"
+   },
+   {
+    "name": "Loop decisions",
+    "datasource": {
+     "type": "grafana-postgresql-datasource",
+     "uid": "driftops-postgres"
+    },
+    "enable": true,
+    "iconColor": "purple",
+    "target": {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "table",
+     "rawSql": "SELECT sim_time AS time, kind || coalesce(' v' || model_version, '') AS text, kind AS tags FROM loop_events WHERE run_id = $run AND $__timeFilter(sim_time) ORDER BY 1"
+    }
+   }
+  ]
+ },
+ "panels": [
+  {
+   "type": "table",
+   "title": "Simulated clock",
+   "description": "Where the replay is.",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "table",
+     "rawSql": "SELECT c.now AS \"simulated now\", r.scenario, c.segment, c.run_id AS run FROM sim_clock c LEFT JOIN runs r USING (run_id)"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 12,
+    "h": 4
+   },
+   "id": 1
+  },
+  {
+   "type": "stat",
+   "title": "Serving model",
+   "description": "The pinned version the server pods run.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max by (version) (driftops_model_info)",
+     "legendFormat": "v{{version}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "none",
+    "textMode": "name",
+    "graphMode": "none"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "id": 2
+  },
+  {
+   "type": "stat",
+   "title": "Retrains",
+   "description": "Phase 3.",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "table",
+     "rawSql": "SELECT count(*) FROM loop_events WHERE run_id = $run AND kind = 'retrain'"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "none",
+    "textMode": "value",
+    "graphMode": "none"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "id": 3
+  },
+  {
+   "type": "stat",
+   "title": "Blocked by data quality",
+   "description": "Windows where retraining was not allowed.",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "table",
+     "rawSql": "SELECT count(*) FROM monitor_results WHERE run_id = $run AND monitor = 'quality' AND alarm"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "textMode": "value",
+    "graphMode": "none"
+   },
+   "gridPos": {
+    "x": 20,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "id": 4
+  },
+  {
+   "type": "timeseries",
+   "title": "Both signals, as a fraction of their threshold",
+   "description": "1.0 = the alarm line for each signal. Label drift crosses first on COVID; feature drift follows when schedules are cut.",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "time_series",
+     "rawSql": "SELECT window_end AS time, abs((metrics->>'psi_max_feature')::float) / 0.1 AS \"feature drift\" FROM monitor_results WHERE run_id = $run AND monitor = 'drift' AND $__timeFilter(window_end) ORDER BY 1"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "time_series",
+     "rawSql": "SELECT window_end AS time, abs((metrics->>'calibration_gap')::float) / 0.158 AS \"label drift (gap)\" FROM monitor_results WHERE run_id = $run AND monitor = 'perf' AND $__timeFilter(window_end) ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "showPoints": "never",
+      "spanNulls": true,
+      "thresholdsStyle": {
+       "mode": "dashed"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 4,
+    "w": 24,
+    "h": 9
+   },
+   "id": 5
+  },
+  {
+   "type": "state-timeline",
+   "title": "Alarms per monitor",
+   "description": "quality / drift / perf, one cell per simulated day. K = 3 in a row (and clean quality) triggers a retrain (Phase 3).",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "time_series",
+     "rawSql": "SELECT window_end AS time, monitor AS metric, alarm::int AS value FROM monitor_results WHERE run_id = $run AND $__timeFilter(window_end) ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "ok",
+         "color": "green",
+         "index": 0
+        },
+        "1": {
+         "text": "ALARM",
+         "color": "red",
+         "index": 1
+        }
+       }
+      }
+     ],
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 13,
+    "w": 24,
+    "h": 6
+   },
+   "id": 6
+  },
+  {
+   "type": "table",
+   "title": "Decisions (loop_events)",
+   "description": "Every alarm, block, retrain, gate result and promotion (Phase 3).",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "table",
+     "rawSql": "SELECT sim_time AS \"simulated time\", kind, model_version, decision_id, details::text AS details FROM loop_events WHERE run_id = $run ORDER BY id DESC LIMIT 50"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 19,
+    "w": 12,
+    "h": 8
+   },
+   "id": 7
+  },
+  {
+   "type": "timeseries",
+   "title": "CronJob freshness",
+   "description": "Seconds since each CronJob last succeeded. Above 300 = the dead man's switch fires.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "time() - kube_cronjob_status_last_successful_time{namespace=\"driftops\"}",
+     "legendFormat": "{{cronjob}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "showPoints": "never",
+      "spanNulls": true,
+      "thresholdsStyle": {
+       "mode": "dashed"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 300
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   },
+   "timeFrom": "30m",
+   "gridPos": {
+    "x": 12,
+    "y": 19,
+    "w": 12,
+    "h": 8
+   },
+   "id": 8
+  },
+  {
+   "type": "logs",
+   "title": "Monitor and feeder logs",
+   "description": "What each CronJob decided, from Loki.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "{namespace=\"driftops\", component=~\"monitor-.*|label-feed\"} | json | event=~\"monitor_result|feed_done|waiting_for_labels\""
+    }
+   ],
+   "options": {
+    "showTime": true,
+    "wrapLogMessage": true,
+    "sortOrder": "Descending",
+    "enableLogDetails": true
+   },
+   "timeFrom": "30m",
+   "gridPos": {
+    "x": 0,
+    "y": 27,
+    "w": 24,
+    "h": 8
+   },
+   "id": 9
+  }
+ ]
+}

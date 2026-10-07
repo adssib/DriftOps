@@ -1,0 +1,55 @@
+{{- /*
+The label feeder and the three monitors: every minute, each catches up one simulated day at a
+time from its watermark (ADR-0010). Forbid: a slow run is never doubled by the next tick.
+*/ -}}
+{{- if .Values.monitors.enabled }}
+{{- $jobs := list
+  (dict "name" "label-feed"      "args" (list "label-feed"))
+  (dict "name" "monitor-quality" "args" (list "monitor" "quality"))
+  (dict "name" "monitor-drift"   "args" (list "monitor" "drift"))
+  (dict "name" "monitor-perf"    "args" (list "monitor" "perf"))
+}}
+{{- range $jobs }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ $.Release.Name }}-{{ .name }}
+  labels:
+    {{- include "driftops.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ .name }}
+spec:
+  schedule: {{ $.Values.monitors.schedule | quote }}
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 50          # a missed tick is skipped, not queued
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 240       # a stuck run can't hold the schedule forever
+      ttlSecondsAfterFinished: 600
+      template:
+        metadata:
+          labels:
+            {{- include "driftops.labels" $ | nindent 12 }}
+            app.kubernetes.io/component: {{ .name }}
+        spec:
+          restartPolicy: Never
+          {{- include "driftops.podSecurity" $ | nindent 10 }}
+          containers:
+            - name: {{ .name }}
+              image: {{ include "driftops.image" $ }}
+              imagePullPolicy: {{ $.Values.image.pullPolicy }}
+              args: {{ toJson .args }}
+              env:
+                {{- include "driftops.env" $ | nindent 16 }}
+                - {name: OMP_NUM_THREADS, value: "1"}
+              resources: {{- toYaml $.Values.monitors.resources | nindent 16 }}
+              securityContext: {{- toYaml $.Values.securityContext | nindent 16 }}
+              volumeMounts:
+                - {name: tmp, mountPath: /tmp}   # the model bundle (drift reference) lands here
+          volumes:
+            - {name: tmp, emptyDir: {sizeLimit: 256Mi}}
+{{- end }}
+{{- end }}

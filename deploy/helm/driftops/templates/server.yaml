@@ -2,7 +2,9 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ .Release.Name }}-server
-  labels: {{- include "driftops.labels" . | nindent 4 }}
+  labels:
+    {{- include "driftops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: server   # ServiceMonitors select Services by their own labels
 spec:
   selector: {{- include "driftops.selector" (dict "root" . "component" "server") | nindent 4 }}
   ports:

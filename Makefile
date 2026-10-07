@@ -2,8 +2,9 @@
 SHELL := /bin/bash
 CLUSTER    ?= driftops
 NAMESPACE  ?= driftops
-TAG        ?= dev-$(shell git rev-parse --short HEAD 2>/dev/null || echo none)-$(shell date +%s)
+TAG        := dev-$(shell git rev-parse --short HEAD 2>/dev/null || echo none)-$(shell date +%s)
 IMAGE      := driftops:$(TAG)
+GIT_SHA    := $(shell git rev-parse --short HEAD 2>/dev/null)$(shell git diff --quiet 2>/dev/null || echo -dirty)
 SCENARIO   ?= covid
 
 .PHONY: help data champion cluster image deploy up reload down test lint smoke status logs sim-status
@@ -22,8 +23,11 @@ cluster:         ## create the k3d cluster (idempotent)
 	@k3d cluster list $(CLUSTER) >/dev/null 2>&1 || \
 	  k3d cluster create --config deploy/k3d.yaml --volume "$(CURDIR)/data:/data@server:0"
 
-image:           ## build the image and load it into the cluster
-	docker build -t $(IMAGE) .
+image:           ## build the image, prove it holds this checkout's code, load it into the cluster
+	docker build --build-arg GIT_SHA=$(GIT_SHA) -t $(IMAGE) .
+	@test "$$(scripts/source_digest.sh $(IMAGE))" = "$$(scripts/source_digest.sh)" \
+	  || { echo "image source != checkout source: stale build"; exit 1; }
+	@echo "image $(IMAGE) holds source $$(scripts/source_digest.sh)"
 	k3d image import $(IMAGE) -c $(CLUSTER)
 	@echo $(TAG) > .image-tag
 
@@ -40,11 +44,18 @@ down:            ## delete the cluster
 test:            ## unit tests (DB tests need DRIFTOPS_TEST_DB_URL)
 	uv run pytest -q
 
-lint:            ## ruff + helm lint + kubeconform
+CRDS := https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json
+
+lint:            ## ruff + helm lint + kubeconform (incl. Prometheus CRDs) + promtool on the alerts
 	uv run ruff check . && uv run ruff format --check .
-	helm lint deploy/helm/driftops -f deploy/helm/driftops/values-dev.yaml
-	helm template driftops deploy/helm/driftops -f deploy/helm/driftops/values-dev.yaml | kubeconform -strict -summary
-	helm template driftops deploy/helm/driftops -f deploy/helm/driftops/values-prod.yaml --set image.tag=ci | kubeconform -strict -summary
+	@for env in dev prod; do \
+	  helm lint deploy/helm/driftops -f deploy/helm/driftops/values-$$env.yaml --set image.tag=ci --strict >/dev/null && \
+	  helm template driftops deploy/helm/driftops -f deploy/helm/driftops/values-$$env.yaml --set image.tag=ci \
+	    | kubeconform -strict -summary -kubernetes-version 1.36.4 -schema-location default -schema-location '$(CRDS)' || exit 1; \
+	done
+	@helm template driftops deploy/helm/driftops -f deploy/helm/driftops/values-dev.yaml --set image.tag=ci -s templates/alerts.yaml \
+	  | uv run python -c "import sys,yaml; print(yaml.safe_dump(yaml.safe_load(sys.stdin)['spec']))" \
+	  | docker run --rm -i --entrypoint sh prom/prometheus:v3.7.0 -c 'cat > /tmp/r.yaml && promtool check rules /tmp/r.yaml'
 
 smoke:           ## helm test + one prediction through the ingress
 	helm test driftops -n $(NAMESPACE) --logs

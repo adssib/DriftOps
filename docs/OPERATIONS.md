@@ -177,18 +177,31 @@ Per request, champion v1 (400 trees), one thread (`runs/phase1/`, `scripts/measu
 So the server scores single-threaded and explains only on request (ADR-0020): ~8 ms of CPU per
 machine request, ~22 ms per explained one.
 
-Five minutes of the COVID scenario, 2 server pods (1 CPU each):
+Five minutes of the COVID scenario, 2 server pods (1 CPU each), on a laptop:
 
-| Run | req/s | 200s | p50 | p95 | p99 | logged / dropped |
-|---|---|---|---|---|---|---|
-| `serving-unbalanced.json` | 80 | 100% | ≤ 50 ms | **≤ 250 ms** | ≤ 500 ms | 24,325 / 0 |
-| `serving.json` (reconnect per simulated day) | 88 | 100% | ≤ 25 ms | **≤ 100 ms** | ≤ 250 ms | 26,754 / 0 |
+| Run | Code actually running | req/s | 200s | p50 | p95 | p99 | logged / dropped |
+|---|---|---|---|---|---|---|---|
+| `serving-unbalanced.json` | first Phase 1 code + `OMP_NUM_THREADS=1` from the chart | 80 | 100% | ≤ 50 ms | ≤ 250 ms | ≤ 500 ms | 24,325 / 0 |
+| `serving.json` | same code; simulator pod restarted after both servers were ready | 88 | 100% | ≤ 25 ms | ≤ 100 ms | ≤ 250 ms | 26,754 / 0 |
+| `serving-verified.json` | **every fix** (thread pool, 1 thread, explain off, reconnect per day), git SHA verified, plus 4 CronJobs every minute | 92 | 100% | **≤ 10 ms** | **≤ 250 ms** | ≤ 500 ms | 27,948 / 0 |
 
-The first run missed the p95 SLO because one pod took all the traffic (822m CPU, throttled in 35%
-of periods) while the other idled: a Service balances **per connection**, and the simulator's
-keep-alive connections were opened while only one pod was ready. Reconnecting every simulated day
-brought the split to 32/68 over the window. **Even split needs per-request balancing**: client-side
-round-robin over a headless Service (what gRPC clients do), or an L7 proxy. That is Phase 8.
+> ⚠️ **Correction (2026-10-06).** Until the third run, images were built from a stale uv-cached
+> wheel and ran the *first* Phase 1 code (found when a migration hook ran a CLI without the
+> command; fixed in `22253a7`, every image's source is now checked against its commit). So the
+> first two runs measured only the chart-level changes, and the earlier write-up that credited
+> the code fixes for the second run's p95 was wrong. What the second run actually shows is the
+> connection-pinning effect: its simulator happened to connect after both pods were ready.
+
+What the three runs do show:
+
+- **The median is real and improved 5x** (≤ 50 → ≤ 10 ms) once the code fixes actually ran.
+- **The tail is not fixed.** p95 ≤ 250 ms misses the 100 ms SLO with the verified code. Likely
+  causes, not yet separated: requests still unevenly split between pods (a Service balances
+  **per connection**, so keep-alive connections pin load), and CPU contention from the four
+  CronJobs on the same small node.
+- **Laptop numbers aren't reproducible enough to decide this.** Performance is measured on AKS
+  in Phase 8, on dedicated D-series nodes, with per-request balancing (client-side round-robin
+  over a headless Service, or an L7 proxy) as the first change to test.
 
 ### Worked example: ⚠️ estimates, to be replaced by measurements
 
@@ -216,3 +229,20 @@ load. A minimum of 2 server pods keeps a single pod failure from being an outage
 **Student subscription limit:** the regional vCPU quota is low, so a 16-node test isn't possible
 on this account. Phase 8 measures the per-pod number and the scale-out curve up to the quota, and
 extrapolates, saying so.
+
+## 8. Operating notes (learned on the k3d bring-up)
+
+- **Verify what's running, not what was built.** An image tag says nothing about its contents:
+  a cached wheel once shipped week-old code under fresh tags. Every image now carries its git
+  SHA (`/readyz`, `driftops_build_info`, every log line) and `make image` / CI fail if the
+  image's source digest differs from the checkout's.
+- **Don't roll the server in the middle of a run.** During a rolling update, old and new pods
+  serve the same simulated day; requests from the old pods lose the run id, and the monitors see
+  half a day (a false drift alarm on 2020-03-10, `dep_hour` PSI 2.6 on 469 rows). Start a new run
+  after a deploy (the simulator does this on restart), or deploy between runs.
+- **Hooks run before the release's own resources.** A `pre-upgrade` hook can't use a Secret key
+  that same release adds; such keys are `optional` in the hook and used by a later Job.
+- **Data and its credentials share a lifecycle.** Postgres' volume outlives `helm uninstall`, so
+  the generated Secret is kept too (`helm.sh/resource-policy: keep`).
+- **Size from measurements.** MLflow (1.8 GiB) and Grafana (OOMKilled at 512 MiB) both got
+  their limits from `kubectl top`, not from guesses.

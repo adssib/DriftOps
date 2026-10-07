@@ -51,3 +51,49 @@ def test_window_query_prunes_partitions(db_url):
         )
     assert "predictions_20200320" in plan
     assert "predictions_20200401" not in plan
+
+
+def test_sink_writes_run_id_and_nan_as_null(db_url):
+    """The real COPY sink: columns line up, and a missing feature (NaN) is stored as null.
+    json.dumps would write NaN, which jsonb rejects, dropping the whole batch."""
+    import math
+
+    from driftops.serving.logger import postgres_sink
+
+    with db.connect(db_url) as conn:
+        db.apply_schema(conn)
+    pool = db.pool(db_url)
+    record = {
+        "request_id": str(uuid.uuid4()),
+        "flight_id": 42,
+        "source": "sim",
+        "run_id": 7,
+        "event_time": dt.datetime(2020, 3, 20, 8, 0),
+        "model_version": 1,
+        "features": {"carrier": "AA", "origin_hour_load": math.nan, "distance": 733.0},
+        "score": 0.25,
+        "latency_ms": 3.1,
+    }
+    postgres_sink(pool)([record])
+    with db.connect(db_url) as conn:
+        row = conn.execute(
+            "SELECT run_id, source, features->'origin_hour_load', features->>'carrier' FROM predictions"
+        ).fetchone()
+    pool.close()
+    assert row == (7, "sim", None, "AA")
+
+
+def test_readonly_role_can_read_but_not_write(db_url):
+    import psycopg
+    import pytest
+
+    with db.connect(db_url) as conn:
+        db.apply_schema(conn)
+        db.ensure_readonly_role(conn, "pw-1")
+        db.ensure_readonly_role(conn, "pw-2")  # idempotent; password follows the Secret
+    ro = db_url.replace("driftops:driftops@", "grafana_ro:pw-2@")
+    with psycopg.connect(ro) as conn:
+        assert conn.execute("SELECT count(*) FROM monitor_results").fetchone()[0] == 0
+        assert conn.execute("SHOW statement_timeout").fetchone()[0] == "10s"
+        with pytest.raises(psycopg.errors.InsufficientPrivilege):
+            conn.execute("DELETE FROM predictions")

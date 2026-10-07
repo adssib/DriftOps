@@ -1,0 +1,47 @@
+{{- if .Values.observability.enabled }}
+# What Prometheus scrapes and probes (OPERATIONS § 1). /metrics is never exposed by the ingress;
+# Prometheus reaches it inside the cluster.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}-server
+  labels: {{- include "driftops.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels: {{- include "driftops.selector" (dict "root" . "component" "server") | nindent 6 }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}-postgres
+  labels: {{- include "driftops.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels: {{- include "driftops.selector" (dict "root" . "component" "postgres") | nindent 6 }}
+  endpoints:
+    - port: metrics
+      interval: 30s
+---
+# Uptime as users see it: through the ingress (Traefik), and directly at the service.
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: {{ .Release.Name }}-uptime
+  labels: {{- include "driftops.labels" . | nindent 4 }}
+spec:
+  interval: 15s
+  module: http_2xx
+  prober:
+    url: {{ .Values.observability.blackboxUrl }}
+  targets:
+    staticConfig:
+      static:
+        - http://traefik.kube-system.svc.cluster.local/healthz
+        - http://{{ .Release.Name }}-server.{{ .Release.Namespace }}.svc.cluster.local/healthz
+      labels:
+        service: driftops
+{{- end }}

@@ -1,0 +1,38 @@
+{
+  "run_id": 1,
+  "days_compared": 83,
+  "from": "2020-03-10",
+  "to": "2020-05-31",
+  "first_sustained_alarm": {
+    "feature_drift": {
+      "cluster": "2020-04-10",
+      "backtest": "2020-04-10"
+    },
+    "label_drift": {
+      "cluster": "2020-03-27",
+      "backtest": "2020-03-27"
+    }
+  },
+  "agreement": {
+    "psi": {
+      "correlation": 0.9967,
+      "median_abs_diff": 0.0134,
+      "max_abs_diff": 0.0765
+    },
+    "gap": {
+      "correlation": 0.9937,
+      "median_abs_diff": 0.0125,
+      "max_abs_diff": 0.0584
+    },
+    "brier": {
+      "correlation": 0.9933,
+      "median_abs_diff": 0.0076,
+      "max_abs_diff": 0.0351
+    }
+  },
+  "quality_alarm_days": 0,
+  "rows_per_window": {
+    "drift_median": 2997,
+    "perf_median": 3122
+  }
+}

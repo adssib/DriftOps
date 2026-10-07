@@ -1,0 +1,350 @@
+{
+ "uid": "driftops-drift",
+ "title": "DriftOps \u00b7 Data drift",
+ "description": "ML engineer view: are the inputs changing?",
+ "tags": [
+  "driftops",
+  "ml"
+ ],
+ "timezone": "utc",
+ "editable": false,
+ "schemaVersion": 39,
+ "time": {
+  "from": "2020-03-01T00:00:00.000Z",
+  "to": "2020-06-01T00:00:00.000Z"
+ },
+ "refresh": "",
+ "templating": {
+  "list": [
+   {
+    "name": "run",
+    "label": "Run",
+    "type": "query",
+    "datasource": {
+     "type": "grafana-postgresql-datasource",
+     "uid": "driftops-postgres"
+    },
+    "query": "SELECT run_id AS __value, 'run ' || run_id || ' \u00b7 ' || scenario AS __text FROM runs ORDER BY run_id DESC",
+    "refresh": 1,
+    "sort": 0,
+    "current": {}
+   }
+  ]
+ },
+ "annotations": {
+  "list": [
+   {
+    "builtIn": 1,
+    "datasource": {
+     "type": "grafana",
+     "uid": "-- Grafana --"
+    },
+    "enable": true,
+    "hide": true,
+    "name": "Annotations & Alerts",
+    "type": "dashboard"
+   },
+   {
+    "name": "Loop decisions",
+    "datasource": {
+     "type": "grafana-postgresql-datasource",
+     "uid": "driftops-postgres"
+    },
+    "enable": true,
+    "iconColor": "purple",
+    "target": {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "table",
+     "rawSql": "SELECT sim_time AS time, kind || coalesce(' v' || model_version, '') AS text, kind AS tags FROM loop_events WHERE run_id = $run AND $__timeFilter(sim_time) ORDER BY 1"
+    }
+   }
+  ]
+ },
+ "panels": [
+  {
+   "type": "text",
+   "title": "",
+   "options": {
+    "mode": "markdown",
+    "content": "**Feature drift**: PSI of each feature over the trailing 7 simulated days against the serving model's reference. Alarm above **0.1** (ADR-0004). Calendar features are never alarmed on; prediction PSI is charted, never alarmed on (seasonal by construction). X axis: simulated time."
+   },
+   "transparent": true,
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 2
+   },
+   "id": 1
+  },
+  {
+   "type": "timeseries",
+   "title": "Max feature PSI",
+   "description": "The alarm signal. Simulated days.",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "time_series",
+     "rawSql": "SELECT window_end AS time, (metrics->>'psi_max_feature')::float AS \"max feature PSI\" FROM monitor_results WHERE run_id = $run AND monitor = 'drift' AND $__timeFilter(window_end) ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "showPoints": "never",
+      "spanNulls": true,
+      "thresholdsStyle": {
+       "mode": "dashed"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 0.1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 2,
+    "w": 12,
+    "h": 9
+   },
+   "id": 2
+  },
+  {
+   "type": "timeseries",
+   "title": "PSI per feature",
+   "description": "Which feature moves. In March 2020 nothing does; in April the schedule cut shows in the hour loads.",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "time_series",
+     "rawSql": "SELECT window_end AS time, f.key AS metric, f.value::float AS value FROM monitor_results, jsonb_each_text(metrics->'psi') AS f WHERE run_id = $run AND monitor = 'drift' AND $__timeFilter(window_end) ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "showPoints": "never",
+      "spanNulls": true,
+      "thresholdsStyle": {
+       "mode": "dashed"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 0.1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 2,
+    "w": 12,
+    "h": 9
+   },
+   "id": 3
+  },
+  {
+   "type": "timeseries",
+   "title": "Prediction PSI (charted, not alarmed)",
+   "description": "Score distribution vs. reference. Swings with the seasons even when nothing is wrong.",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "time_series",
+     "rawSql": "SELECT window_end AS time, (metrics->>'psi_score')::float AS \"prediction PSI\" FROM monitor_results WHERE run_id = $run AND monitor = 'drift' AND $__timeFilter(window_end) ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "showPoints": "never",
+      "spanNulls": true
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 11,
+    "w": 12,
+    "h": 7
+   },
+   "id": 4
+  },
+  {
+   "type": "state-timeline",
+   "title": "Drift alarm",
+   "description": "One cell per simulated day.",
+   "datasource": {
+    "type": "grafana-postgresql-datasource",
+    "uid": "driftops-postgres"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "driftops-postgres"
+     },
+     "rawQuery": true,
+     "editorMode": "code",
+     "format": "time_series",
+     "rawSql": "SELECT window_end AS time, alarm::int AS \"drift\" FROM monitor_results WHERE run_id = $run AND monitor = 'drift' AND $__timeFilter(window_end) ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "ok",
+         "color": "green",
+         "index": 0
+        },
+        "1": {
+         "text": "ALARM",
+         "color": "red",
+         "index": 1
+        }
+       }
+      }
+     ],
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showValue": "never",
+    "mergeValues": true,
+    "rowHeight": 0.8
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 11,
+    "w": 12,
+    "h": 7
+   },
+   "id": 5
+  }
+ ]
+}
