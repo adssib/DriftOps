@@ -55,5 +55,7 @@ code, 5 minutes of the COVID scenario: 92 req/s, 100% 200s, 0 dropped, p50 ≤ 1
 label feeder and three monitors as CronJobs; Prometheus, Grafana (5 dashboards as code,
 Drilldown), Loki, uptime probes, 12 alerts as code. **The cluster's alarms land on the
 backtest's days** (`runs/phase2/agreement.json`): label drift 2020-03-27 and feature drift
-2020-04-10 in both, daily correlation ≥ 0.993. Alerts are not routed to a receiver yet.
+2020-04-10 in both, daily correlation ≥ 0.993. The corruption scenario (`runs/phase2/corruption.json`):
+data quality breached on the first corrupted day (Feb 3) and drift followed on `distance` (Feb 6),
+labels stayed quiet, and Grafana's DataQualityBreach fired. Alerts are not routed to a receiver yet.
 **Phase 3 is next.**

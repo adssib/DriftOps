@@ -1,0 +1,41 @@
+{
+  "run_id": 2,
+  "scenario": "corruption",
+  "sim_start": "2020-01-20",
+  "monitors": {
+    "drift": {
+      "days": 40,
+      "from": "2020-01-20",
+      "to": "2020-02-28",
+      "alarm_days": 14,
+      "alarm_ranges": [
+        "2020-02-06..2020-02-19"
+      ],
+      "first_sustained_alarm": "2020-02-08",
+      "worst_feature_on_alarm": {
+        "distance": 14
+      }
+    },
+    "perf": {
+      "days": 40,
+      "from": "2020-01-20",
+      "to": "2020-02-28",
+      "alarm_days": 0,
+      "alarm_ranges": [],
+      "first_sustained_alarm": null
+    },
+    "quality": {
+      "days": 40,
+      "from": "2020-01-20",
+      "to": "2020-02-28",
+      "alarm_days": 20,
+      "alarm_ranges": [
+        "2020-02-03..2020-02-22"
+      ],
+      "first_sustained_alarm": "2020-02-05",
+      "breaches": {
+        "route_distance_mismatch": 20
+      }
+    }
+  }
+}
